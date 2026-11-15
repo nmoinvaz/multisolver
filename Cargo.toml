@@ -1,0 +1,24 @@
+[package]
+name = "multisolver"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+description = "Nonlinear solvers in double-, quad- and octo-double precision over multidouble's Precision trait: damped Newton, chord and Shamanskii, GMRES-refined Newton, Levenberg-Marquardt, the asymptotic numerical method, continuation predictors, weak singular subspaces, series singularities and the argument-principle zero count"
+license = "BSD-3-Clause"
+repository = "https://github.com/nmoinvaz/multisolver"
+readme = "README.md"
+keywords = ["newton", "nonlinear-solver", "extended-precision", "continuation", "argument-principle"]
+categories = ["mathematics", "science"]
+exclude = ["/.github", "/.claude", "/CLAUDE.md"]
+
+[dependencies]
+# 4.5.0: the Precision trait (Double, Quad, Octo) and its LUs; the blocked complex LU
+multidouble = "4.5.0"
+rayon = "1.10"
+
+[features]
+# the plain-array SIMD backend of multidouble on every target
+portable = ["multidouble/portable"]
+
+[profile.release]
+opt-level = 3
