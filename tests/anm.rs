@@ -13,7 +13,7 @@ const LAM0: f64 = 0.7;
 /// F_i(z, lam) = z_i^3 - w_i(lam)^3 + kappa (z_(i+1) - w_(i+1)(lam)), the index cyclic, with the quadratic
 /// w_i(lam) = a_i + b_i lam + c_i lam^2, so the branch through lam0 is z(lam0 + h) = w(lam0 + h): z_1 = b + 2 c lam0,
 /// z_2 = c, z_k = 0 for k >= 3. `freeze`: the series with lam a constant (the control). `nan_jvp`: the products J v
-/// all NaN (a broken refinement, the control of the recorded residuals). `online`: the series one order at a time
+/// all NaN (a broken refinement, the control of the recorded residuals). `by_order`: the series one order at a time
 /// by `residual_jet` (0), by `PolyOrders` (1), or by `PolyOrders` without its redo (2, the control).
 struct Poly<P: Precision<Native>> {
     a: Vec<P::Scalar>,
@@ -21,7 +21,7 @@ struct Poly<P: Precision<Native>> {
     c: Vec<P::Scalar>,
     freeze: bool,
     nan_jvp: bool,
-    online: u8,
+    by_order: u8,
 }
 
 fn s<P: Precision<Native>>(x: f64) -> P::Scalar {
@@ -55,7 +55,7 @@ impl<P: Precision<Native>> Poly<P> {
             c: (0..N).map(|i| s::<P>(0.05 * (2.0 * i as f64).sin())).collect(),
             freeze,
             nan_jvp: false,
-            online: 0,
+            by_order: 0,
         }
     }
     /// w_i(lam0 + h) as a series of n terms
@@ -137,14 +137,14 @@ impl<P: Precision<Native>> ResidualJet<P> for Poly<P> {
     where
         P: 'a,
     {
-        if self.online == 0 {
+        if self.by_order == 0 {
             return Ok(Box::new(Recompute::new(self)));
         }
         Ok(Box::new(PolyOrders {
             pr: self,
             x: vec![Vec::new(); N],
             sq: vec![Vec::new(); N],
-            redo: self.online == 1,
+            redo: self.by_order == 1,
         }))
     }
 }
@@ -198,11 +198,11 @@ fn poly_branch<P: Precision<Native>>(freeze: bool, nan_jvp: bool) -> Branch<P> {
     poly_branch_by::<P>(freeze, nan_jvp, 0)
 }
 
-/// `poly_branch` with the residual's orders from `Poly::online`'s source
-fn poly_branch_by<P: Precision<Native>>(freeze: bool, nan_jvp: bool, online: u8) -> Branch<P> {
+/// `poly_branch` with the residual's orders from `Poly::by_order`'s source
+fn poly_branch_by<P: Precision<Native>>(freeze: bool, nan_jvp: bool, by_order: u8) -> Branch<P> {
     let mut pr = Poly::<P>::new(freeze);
     pr.nan_jvp = nan_jvp;
-    pr.online = online;
+    pr.by_order = by_order;
     let z0 = pr.root();
     series::<P, _>(&pr, &parts(&z0), 8, 1, false).unwrap()
 }
@@ -323,13 +323,13 @@ fn bits_differ<P: Precision<Native>>(x: &[P::Scalar], y: &[P::Scalar]) -> usize 
 fn anm_takes_the_orders_from_jet_orders() {
     fn run<P: Precision<Native>>(name: &str) {
         let base = poly_branch_by::<P>(false, false, 0);
-        let online = poly_branch_by::<P>(false, false, 1);
+        let by_order = poly_branch_by::<P>(false, false, 1);
         let stale = poly_branch_by::<P>(false, false, 2);
         let per_order =
             |b: &Branch<P>| -> Vec<usize> { base.z.iter().zip(&b.z).map(|(x, y)| bits_differ::<P>(x, y)).collect() };
-        let (d1, d2) = (per_order(&online), per_order(&stale));
+        let (d1, d2) = (per_order(&by_order), per_order(&stale));
         let first = d2.iter().position(|&n| n > 0);
-        println!("{name}: differing entries per order, online {d1:?}, control {d2:?}");
+        println!("{name}: differing entries per order, by order {d1:?}, control {d2:?}");
         assert!(
             d1.iter().all(|&n| n == 0),
             "{name}: the orders from jet_orders changed the series"
