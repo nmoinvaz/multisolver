@@ -93,4 +93,56 @@ pub trait ResidualJet<P: Precision<Native>>: Problem<P> {
     /// The coefficients of orders 0..nout - 1, one scalar per row, for the coefficient vectors zs (each P::PARTS part
     /// arrays of length `len()`, z_k zero past them). Order k is linear in z_k: J z_k plus what the lower orders give.
     fn residual_jet(&self, zs: &[Vec<&[f64]>], nout: usize, par: bool) -> Result<Vec<Vec<P::Scalar>>, String>;
+
+    /// The residual's series one order at a time ([`JetOrders`]), for orders up to `order`. By default each order is
+    /// `residual_jet`'s, which forms every lower order again ([`Recompute`]), so a series of order N costs N
+    /// evaluations of growing length. A problem that keeps its lower orders between calls overrides it.
+    fn jet_orders<'a>(&'a self, order: usize) -> Result<Box<dyn JetOrders<P> + 'a>, String>
+    where
+        P: 'a,
+    {
+        let _ = order;
+        Ok(Box::new(Recompute::new(self)))
+    }
+}
+
+/// The residual's series in the parameter formed one order at a time, as the series of a branch needs it: order k
+/// once z_0..z_(k-1) are known, with z_k left out.
+pub trait JetOrders<P: Precision<Native>> {
+    /// Order k of the residual's series (one scalar per row), where z, the newest coefficient vector (P::PARTS part
+    /// arrays of length `len()`), is z_(k-1): the first call gives z_0 and returns order 1. z_k and the orders past it
+    /// are zero, so the result is F_k of the solve J z_k = -F_k.
+    fn next(&mut self, z: &[&[f64]], par: bool) -> Result<Vec<P::Scalar>, String>;
+}
+
+/// [`JetOrders`] by [`ResidualJet::residual_jet`]: each call evaluates the series of orders 0..=k on every vector
+/// given so far and returns its order k.
+pub struct Recompute<'a, P: Precision<Native>, Pr: ResidualJet<P> + ?Sized> {
+    pr: &'a Pr,
+    zs: Vec<Vec<Vec<f64>>>,
+    _p: std::marker::PhantomData<P>,
+}
+
+impl<'a, P: Precision<Native>, Pr: ResidualJet<P> + ?Sized> Recompute<'a, P, Pr> {
+    /// no vectors given yet
+    pub fn new(pr: &'a Pr) -> Self {
+        Recompute {
+            pr,
+            zs: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<P: Precision<Native>, Pr: ResidualJet<P> + ?Sized> JetOrders<P> for Recompute<'_, P, Pr> {
+    fn next(&mut self, z: &[&[f64]], par: bool) -> Result<Vec<P::Scalar>, String> {
+        self.zs.push(z.iter().map(|p| p.to_vec()).collect());
+        let k = self.zs.len();
+        let refs: Vec<Vec<&[f64]>> = self.zs.iter().map(|v| prec::parts(v)).collect();
+        let mut f = self.pr.residual_jet(&refs, k + 1, par)?;
+        if f.len() <= k {
+            return Err(format!("residual_jet gave {} orders, not {}", f.len(), k + 1));
+        }
+        Ok(f.swap_remove(k))
+    }
 }

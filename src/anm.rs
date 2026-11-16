@@ -3,8 +3,8 @@
 //! Cochelin, Damil and Potier-Ferry, Int. J. Numer. Methods Eng. 37 (1994) 1187).
 //!
 //! Order k of F(z(h), p0 + h) is J z_k plus what the lower orders give, with J the Jacobian at z_0, so each
-//! coefficient solves J z_k = -F_k, where F_k is order k of the residual's series with z_k left out
-//! ([`ResidualJet`]). One factorization of J serves every order. With `refine` > 0 each solve is refined by the exact
+//! coefficient solves J z_k = -F_k, where F_k is order k of the residual's series with z_k left out, taken one order
+//! at a time from the problem's [`ResidualJet::jet_orders`]. One factorization of J serves every order. With `refine` > 0 each solve is refined by the exact
 //! products J x ([`Jvp`]): the residual b - J x, solved with the same factors, corrects x.
 //!
 //! The series is valid up to about [`Branch::radius`], Cochelin's estimate (delta |z_1| / |z_N|)^(1 / (N - 1)), where
@@ -41,17 +41,17 @@ pub fn series<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized>(
     par: bool,
 ) -> Result<Branch<P>, String> {
     let lu = exact::<P, Pr>(pr, z0, par)?.0;
-    let mut zp: Vec<Vec<Vec<f64>>> = vec![z0.iter().map(|p| p.to_vec()).collect()];
+    let mut orders = pr.jet_orders(order)?;
+    let mut last: Vec<Vec<f64>> = z0.iter().map(|p| p.to_vec()).collect();
     let mut br = Branch {
         z: vec![(0..pr.len())
             .map(|i| P::from_raw(&z0.iter().map(|p| p[i]).collect::<Vec<_>>()))
             .collect()],
         residual: Vec::new(),
     };
-    for k in 1..=order {
-        let refs: Vec<Vec<&[f64]>> = zp.iter().map(|z| parts(z)).collect();
-        let f = pr.residual_jet(&refs, k + 1, par)?;
-        let b: Vec<P::Scalar> = f[k].iter().map(|&v| -v).collect();
+    for _ in 1..=order {
+        let f = orders.next(&parts(&last), par)?;
+        let b: Vec<P::Scalar> = f.iter().map(|&v| -v).collect();
         let mut x = b.clone();
         P::lu_solve(&lu, &mut x);
         let resid = |x: &[P::Scalar]| -> Result<Vec<P::Scalar>, String> {
@@ -69,7 +69,7 @@ pub fn series<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized>(
         } else {
             f64::NAN
         });
-        zp.push(to_parts::<P>(&x));
+        last = to_parts::<P>(&x);
         br.z.push(x);
     }
     Ok(br)

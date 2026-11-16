@@ -11,7 +11,10 @@ Solvers of nonlinear systems F(z) = 0 in double-, quad- and octo-double precisio
 A problem enters through the `Problem` trait: its residual and its exact Jacobian in one of
 [multidouble](https://github.com/nmoinvaz/multidouble)'s precisions (`Double`, `Quad`, `Octo`). The `Jvp` and
 `ResidualJet` traits add the Jacobian-vector product and the residual's Taylor series in a parameter, which the Krylov
-solver, the series of a branch and the exact tangent need. The solvers need nothing else of the problem.
+solver, the series of a branch and the exact tangent need. The series of a branch takes the residual's orders one at a
+time (`ResidualJet::jet_orders`): by default each is a fresh `residual_jet` of all the lower orders, and a problem that
+keeps its lower orders between calls overrides it, so that a series of order N costs N orders instead of N
+evaluations of growing length. The solvers need nothing else of the problem.
 [multishoot](https://github.com/nmoinvaz/multishoot)'s multiple-shooting layout is one such problem.
 
 | Module | What it does |
