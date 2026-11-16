@@ -4,7 +4,7 @@
 use multisolver::anm::{series, Branch};
 use multisolver::multidouble::linalg::ld_for;
 use multisolver::prec::{nan_max, parts};
-use multisolver::{Double, Jvp, Native, Precision, Problem, Quad, ResidualJet, DD};
+use multisolver::{Double, JetOrders, Jvp, Native, Precision, Problem, Quad, Recompute, ResidualJet, DD};
 
 const N: usize = 10;
 const KAPPA: f64 = 0.3;
@@ -13,13 +13,15 @@ const LAM0: f64 = 0.7;
 /// F_i(z, lam) = z_i^3 - w_i(lam)^3 + kappa (z_(i+1) - w_(i+1)(lam)), the index cyclic, with the quadratic
 /// w_i(lam) = a_i + b_i lam + c_i lam^2, so the branch through lam0 is z(lam0 + h) = w(lam0 + h): z_1 = b + 2 c lam0,
 /// z_2 = c, z_k = 0 for k >= 3. `freeze`: the series with lam a constant (the control). `nan_jvp`: the products J v
-/// all NaN (a broken refinement, the control of the recorded residuals).
+/// all NaN (a broken refinement, the control of the recorded residuals). `online`: the series one order at a time
+/// by `residual_jet` (0), by `PolyOrders` (1), or by `PolyOrders` without its redo (2, the control).
 struct Poly<P: Precision<Native>> {
     a: Vec<P::Scalar>,
     b: Vec<P::Scalar>,
     c: Vec<P::Scalar>,
     freeze: bool,
     nan_jvp: bool,
+    online: u8,
 }
 
 fn s<P: Precision<Native>>(x: f64) -> P::Scalar {
@@ -53,6 +55,7 @@ impl<P: Precision<Native>> Poly<P> {
             c: (0..N).map(|i| s::<P>(0.05 * (2.0 * i as f64).sin())).collect(),
             freeze,
             nan_jvp: false,
+            online: 0,
         }
     }
     /// w_i(lam0 + h) as a series of n terms
@@ -130,12 +133,76 @@ impl<P: Precision<Native>> ResidualJet<P> for Poly<P> {
             .collect();
         Ok((0..nout).map(|k| rows.iter().map(|r| r[k]).collect()).collect())
     }
+    fn jet_orders<'a>(&'a self, _order: usize) -> Result<Box<dyn JetOrders<P> + 'a>, String>
+    where
+        P: 'a,
+    {
+        if self.online == 0 {
+            return Ok(Box::new(Recompute::new(self)));
+        }
+        Ok(Box::new(PolyOrders {
+            pr: self,
+            x: vec![Vec::new(); N],
+            sq: vec![Vec::new(); N],
+            redo: self.online == 1,
+        }))
+    }
+}
+
+/// The polynomial's series one order at a time: each unknown's coefficients and its square's, kept between calls.
+/// The square's order k - 1, formed with z_(k-1) zero by the call before, is formed again once z_(k-1) is given
+/// (`redo`; the control keeps it). Every sum is `conv`'s, term for term, so order k is `residual_jet`'s, bitwise.
+struct PolyOrders<'a, P: Precision<Native>> {
+    pr: &'a Poly<P>,
+    x: Vec<Vec<P::Scalar>>,
+    sq: Vec<Vec<P::Scalar>>,
+    redo: bool,
+}
+
+/// order m of the product of the series x and y, their coefficients past the given ones zero, summed as `conv` does
+fn conv_at<P: Precision<Native>>(x: &[P::Scalar], y: &[P::Scalar], m: usize) -> P::Scalar {
+    let at = |v: &[P::Scalar], j: usize| if j < v.len() { v[j] } else { P::ZERO };
+    (0..=m).fold(P::ZERO, |t, j| t + at(x, j) * at(y, m - j))
+}
+
+impl<P: Precision<Native>> JetOrders<P> for PolyOrders<'_, P> {
+    fn next(&mut self, z: &[&[f64]], _par: bool) -> Result<Vec<P::Scalar>, String> {
+        let z = scalars::<P>(z);
+        let k = self.x[0].len() + 1;
+        for ((x, sq), &zi) in self.x.iter_mut().zip(&mut self.sq).zip(&z) {
+            x.push(zi);
+            if sq.len() == k {
+                if self.redo {
+                    sq[k - 1] = conv_at::<P>(x, x, k - 1);
+                }
+            } else {
+                sq.push(conv_at::<P>(x, x, k - 1));
+            }
+            sq.push(conv_at::<P>(x, x, k));
+        }
+        Ok((0..N)
+            .map(|i| {
+                let j = (i + 1) % N;
+                let z3 = conv_at::<P>(&self.sq[i], &self.x[i], k);
+                let wi = self.pr.w(i, k + 1);
+                let w3 = conv::<P>(&conv::<P>(&wi, &wi, k + 1), &wi, k + 1)[k];
+                let wj = self.pr.w(j, k + 1)[k];
+                z3 - w3 + s::<P>(KAPPA) * (P::ZERO - wj)
+            })
+            .collect())
+    }
 }
 
 /// The series of order 8 at the root of the polynomial branch in P, refined once
 fn poly_branch<P: Precision<Native>>(freeze: bool, nan_jvp: bool) -> Branch<P> {
+    poly_branch_by::<P>(freeze, nan_jvp, 0)
+}
+
+/// `poly_branch` with the residual's orders from `Poly::online`'s source
+fn poly_branch_by<P: Precision<Native>>(freeze: bool, nan_jvp: bool, online: u8) -> Branch<P> {
     let mut pr = Poly::<P>::new(freeze);
     pr.nan_jvp = nan_jvp;
+    pr.online = online;
     let z0 = pr.root();
     series::<P, _>(&pr, &parts(&z0), 8, 1, false).unwrap()
 }
@@ -238,4 +305,37 @@ fn anm_records_its_solve_residuals() {
         bad.residual.iter().all(|r| r.is_nan()) && !check(&bad),
         "control did not fire"
     );
+}
+
+/// the number of entries of x and y whose parts differ in any bit
+fn bits_differ<P: Precision<Native>>(x: &[P::Scalar], y: &[P::Scalar]) -> usize {
+    x.iter()
+        .zip(y)
+        .filter(|(&u, &v)| (0..P::PARTS).any(|q| P::part(u, q).to_bits() != P::part(v, q).to_bits()))
+        .count()
+}
+
+/// Pass, written before the first run: the series of order 8 whose residual orders come one at a time from a
+/// problem that keeps its lower orders (`PolyOrders`) is the series from `residual_jet`, bit for bit, in double- and
+/// quad-double. The control: without the redo of order k - 1 once z_(k-1) is given, the coefficients differ, first
+/// at order 2.
+#[test]
+fn anm_takes_the_orders_from_jet_orders() {
+    fn run<P: Precision<Native>>(name: &str) {
+        let base = poly_branch_by::<P>(false, false, 0);
+        let online = poly_branch_by::<P>(false, false, 1);
+        let stale = poly_branch_by::<P>(false, false, 2);
+        let per_order =
+            |b: &Branch<P>| -> Vec<usize> { base.z.iter().zip(&b.z).map(|(x, y)| bits_differ::<P>(x, y)).collect() };
+        let (d1, d2) = (per_order(&online), per_order(&stale));
+        let first = d2.iter().position(|&n| n > 0);
+        println!("{name}: differing entries per order, online {d1:?}, control {d2:?}");
+        assert!(
+            d1.iter().all(|&n| n == 0),
+            "{name}: the orders from jet_orders changed the series"
+        );
+        assert_eq!(first, Some(2), "{name}: control did not fire as written");
+    }
+    run::<Double>("double-double");
+    run::<Quad>("quad-double");
 }
