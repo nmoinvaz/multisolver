@@ -1,6 +1,6 @@
 //! The Levenberg-Marquardt method: its Gram matrix against scalar dot products, a start where the Jacobian is singular
-//! and Newton's method cannot step, and its handover to Newton. The crate multishoot tests it on a planted
-//! multiple-shooting problem.
+//! and Newton's method cannot step, its handover to Newton, and its steps in double-double reaching quad- and
+//! octo-double's accuracy alone. The crate multishoot tests it on a planted multiple-shooting problem.
 
 use multisolver::lm::{gram, levenberg_marquardt, levenberg_marquardt_with, LmOpts};
 use multisolver::multidouble::linalg::ld_for;
@@ -372,4 +372,133 @@ fn lm_hands_over_to_newton_with_lowered_factors() {
     }
     case::<Quad>("quad-double", 1e-60, 1e-50);
     case::<Octo>("octo-double", 1e-120, 1e-110);
+}
+
+const NP: usize = 12;
+
+/// F(z) = A z + 0.1 z^3 - b in P, the cube by entries, A dense and diagonally dominant with entries of parts below
+/// double-double's (v + 1e-17 v + 1e-40 v), b = A z* + 0.1 z*^3 for z*_i = 0.5 + 0.1 sin(i). With `rounded` the
+/// residual takes A rounded to double-double, its root then off z* by about 1e-40.
+struct Planted<P: Precision<Native>> {
+    a: Vec<Vec<P::Scalar>>,
+    b: Vec<P::Scalar>,
+    rounded: bool,
+}
+
+impl<P: Precision<Native>> Planted<P> {
+    fn new(rounded: bool) -> (Self, Vec<P::Scalar>) {
+        let s = |x: f64| P::from_dd(DD::from_f64(x));
+        let a: Vec<Vec<P::Scalar>> = (0..NP)
+            .map(|i| {
+                (0..NP)
+                    .map(|j| {
+                        let v = if i == j {
+                            4.0
+                        } else {
+                            0.5 * ((3 * i + 5 * j) as f64).sin()
+                        };
+                        P::from_dd(DD::new(v, v * 1e-17)) + s(v * 1e-40)
+                    })
+                    .collect()
+            })
+            .collect();
+        let zs: Vec<P::Scalar> = (0..NP).map(|i| s(0.5 + 0.1 * (i as f64).sin())).collect();
+        let mut pr = Planted {
+            a,
+            b: vec![P::ZERO; NP],
+            rounded: false,
+        };
+        pr.b = pr.terms(&zs);
+        pr.rounded = rounded;
+        (pr, zs)
+    }
+
+    /// A z + 0.1 z^3, A rounded to double-double with `rounded`
+    fn terms(&self, z: &[P::Scalar]) -> Vec<P::Scalar> {
+        let c = P::from_dd(DD::from_f64(0.1));
+        self.a
+            .iter()
+            .zip(z)
+            .map(|(row, &zi)| {
+                let az = P::dot(row.iter().zip(z).map(|(&a, &x)| {
+                    let a = if self.rounded { P::from_dd(P::to_dd(a)) } else { a };
+                    (a, x)
+                }));
+                az + c * zi * zi * zi
+            })
+            .collect()
+    }
+}
+
+impl<P: Precision<Native>> Problem<P> for Planted<P> {
+    fn len(&self) -> usize {
+        NP
+    }
+    fn residual(&self, z: &[&[f64]], _par: bool) -> Result<Vec<P::Scalar>, String> {
+        let z: Vec<P::Scalar> = (0..NP).map(|i| sc::<P>(z, i)).collect();
+        Ok(self.terms(&z).iter().zip(&self.b).map(|(&t, &b)| t - b).collect())
+    }
+    fn jacobian(&self, z: &[&[f64]], _par: bool) -> Result<(Vec<Vec<f64>>, usize), String> {
+        let ld = ld_for(NP);
+        let c3 = P::from_dd(DD::from_f64(0.3));
+        let mut c = vec![vec![0.0; ld * NP]; P::PARTS];
+        for (i, row) in self.a.iter().enumerate() {
+            let zi = sc::<P>(z, i);
+            for (j, &a) in row.iter().enumerate() {
+                let v = if i == j { a + c3 * zi * zi } else { a };
+                for (q, cq) in c.iter_mut().enumerate() {
+                    cq[j * ld + i] = P::part(v, q);
+                }
+            }
+        }
+        Ok((c, ld))
+    }
+}
+
+/// LM in P on Planted from z = 1 to `tol` without the handover: (converged, LM steps, max |F| of the exact residual,
+/// max |z - z*|)
+fn lm_alone<P: Precision<Native>>(tol: f64, rounded: bool) -> (bool, usize, f64, f64) {
+    let (pr, zs) = Planted::<P>::new(rounded);
+    let mut z: Vec<Vec<f64>> = (0..P::PARTS)
+        .map(|q| vec![if q == 0 { 1.0 } else { 0.0 }; NP])
+        .collect();
+    let opts = LmOpts {
+        tol,
+        newton_after: 0.0,
+        par: false,
+        ..Default::default()
+    };
+    let rep = levenberg_marquardt::<P, _>(&pr, &mut z, &opts).unwrap();
+    let (exact, _) = Planted::<P>::new(false);
+    let f = max_abs::<P>(&exact.residual(&parts(&z), false).unwrap());
+    let err = (0..NP)
+        .map(|i| P::to_dd(sc::<P>(&parts(&z), i) - zs[i]).hi.abs())
+        .fold(0.0, nan_max);
+    (rep.converged, rep.mu.len(), f, err)
+}
+
+/// Pass, written before the first run: with no handover (`newton_after` 0), LM's steps solved in double-double from
+/// J and F rounded to it, LM from z = 1 on Planted, whose matrix has parts below double-double's, converges within
+/// 50 LM steps to max |F| <= 1e-60 with max |z - z*| <= 1e-59 in quad-double, and to 1e-120 and 1e-119 in
+/// octo-double: the residual in P sets the accuracy. The control: with the residual's matrix rounded to double-double,
+/// the steps' precision, LM converges to a root off z* by about 1e-40 and fails both checks.
+#[test]
+fn lm_alone_reaches_the_precision_from_double_double_steps() {
+    let checks = |(_, _, f, err): (bool, usize, f64, f64), tol: f64| [f <= tol, err <= 10.0 * tol];
+    let case = |name: &str, r: (bool, usize, f64, f64), tol: f64, want: [bool; 2]| {
+        println!(
+            "{name}: converged {} after {} LM steps, max |F| {:.3e}, max |z - z*| {:.3e}",
+            r.0, r.1, r.2, r.3
+        );
+        assert!(r.0 && r.1 <= 50, "{name}: LM did not converge");
+        assert_eq!(checks(r, tol), want, "{name}");
+    };
+    case("quad-double", lm_alone::<Quad>(1e-60, false), 1e-60, [true; 2]);
+    case("octo-double", lm_alone::<Octo>(1e-120, false), 1e-120, [true; 2]);
+    case(
+        "control, quad-double, residual rounded to double-double",
+        lm_alone::<Quad>(1e-60, true),
+        1e-60,
+        [false; 2],
+    );
 }

@@ -12,16 +12,22 @@
 //! mu. A factorization that fails (a singular or non-finite pivot) counts as a refused step. An error of the problem's
 //! residual at a trial state is returned, as Newton's method does.
 //!
-//! G is formed once per step in P, on the lanes of P (8 rows of a column per lane vector, the dot accumulator of the
-//! lane type), only its upper triangle and with its columns in parallel; each mu tried costs one factorization of
-//! G + mu D.
+//! The steps are solved in double-double whatever P: G and J^T F are formed once per step from J and F rounded to
+//! double-double (their first two parts), on the lanes of double-double (8 rows of a column per lane vector, the dot
+//! accumulator of the lane type), only G's upper triangle and with its columns in parallel, and each mu tried costs
+//! one factorization of G + mu D in double-double. The steps only have to lower |F| until the handover; the residual,
+//! the trial states and the handover stay in P, so that LM alone still converges to P's accuracy, linearly by about
+//! cond(J)^2 2^-104 per step near the root. At n = 256 the Gram matrix and the LU in double-double cost about 1/8 and
+//! 1/20 of quad-double's, 1/90 and 1/120 of octo-double's. For P = `Double` nothing is rounded. Past cond(J) of about
+//! 1e15 at the root the steps lose their accuracy there, and the handover's Newton, in P, finishes.
 use crate::newton::{exact, newton_with, norm2, Factored, NewtonOpts, NewtonReport};
 use crate::prec::{max_abs, parts};
 use crate::Problem;
 use multidouble::dd::DD;
 use multidouble::dual::Lane;
 use multidouble::field::Fl;
-use multidouble::precision::Precision;
+use multidouble::linalg::DDLu;
+use multidouble::precision::{Double, Precision};
 use multidouble::simd::Native;
 use rayon::prelude::*;
 
@@ -202,21 +208,22 @@ pub fn levenberg_marquardt_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F
             }
         }
         let (c, ld) = pr.jacobian(&parts(z), opts.par)?;
-        let nf: Vec<P::Scalar> = f.iter().map(|&v| -v).collect();
-        let (g, jf) = gram::<P>(n, ld, &c, &nf, opts.par);
-        let mut buf = vec![0.0; P::PARTS];
-        let mut diag: Vec<P::Scalar> = (0..n)
-            .map(|i| {
-                for (q, b) in buf.iter_mut().enumerate() {
-                    *b = g[q][i * ld + i];
-                }
-                P::from_raw(&buf)
+        if c.len() != P::PARTS {
+            return Err(format!("lm: a Jacobian of {} parts, not {}", c.len(), P::PARTS));
+        }
+        // G and J^T F in double-double, from J's first two parts and F rounded
+        let nf: Vec<DD> = f.iter().map(|&v| -P::to_dd(v)).collect();
+        let (g, jf) = gram::<Double>(n, ld, &c[..2], &nf, opts.par);
+        let mut diag: Vec<DD> = (0..n)
+            .map(|i| DD {
+                hi: g[0][i * ld + i],
+                lo: g[1][i * ld + i],
             })
             .collect();
-        let floor = diag.iter().map(|&d| P::to_dd(d).hi).fold(0.0, f64::max) * 2f64.powi(-104);
+        let floor = diag.iter().map(|d| d.hi).fold(0.0, f64::max) * 2f64.powi(-104);
         for d in diag.iter_mut() {
-            if P::to_dd(*d).hi < floor {
-                *d = P::from_dd(DD::from_f64(floor));
+            if d.hi < floor {
+                *d = DD::from_f64(floor);
             }
         }
         if mu < 0.0 {
@@ -225,19 +232,15 @@ pub fn levenberg_marquardt_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F
         let f2 = norm2::<P>(&f).powi(2);
         loop {
             // (G + mu D) dz = -J^T F
-            let mut a = g.clone();
-            let m = P::from_dd(DD::from_f64(mu));
+            let [mut hi, mut lo]: [Vec<f64>; 2] = g.clone().try_into().expect("gram: 2 parts");
+            let m = DD::from_f64(mu);
             for (i, &d) in diag.iter().enumerate() {
-                for (q, b) in buf.iter_mut().enumerate() {
-                    *b = a[q][i * ld + i];
-                }
-                let v = P::from_raw(&buf) + m * d;
-                for (q, aq) in a.iter_mut().enumerate() {
-                    aq[i * ld + i] = P::part(v, q);
-                }
+                let k = i * ld + i;
+                let v = DD { hi: hi[k], lo: lo[k] } + m * d;
+                (hi[k], lo[k]) = (v.hi, v.lo);
             }
             rep.factorizations += 1;
-            let Ok(lu) = P::lu_factor(n, ld, a, opts.par) else {
+            let Ok(lu) = DDLu::factor(n, ld, hi, lo, opts.par) else {
                 mu *= nu;
                 nu *= 2.0;
                 if !mu.is_finite() {
@@ -247,15 +250,16 @@ pub fn levenberg_marquardt_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F
                 continue;
             };
             let mut dz = jf.clone();
-            P::lu_solve(&lu, &mut dz);
-            let zt = add::<P>(&parts(z), &dz);
+            lu.solve(&mut dz);
+            let dzp: Vec<P::Scalar> = dz.iter().map(|&h| P::from_dd(h)).collect();
+            let zt = add::<P>(&parts(z), &dzp);
             let ft = pr.residual(&parts(&zt), opts.par)?;
             // predicted decrease of |F|^2 / 2: dz . (mu D dz - J^T F) / 2, J^T F = -jf
             let pred: f64 = dz
                 .iter()
                 .zip(&diag)
                 .zip(&jf)
-                .map(|((&h, &d), &j)| P::to_dd(h * (P::from_dd(DD::from_f64(mu)) * d * h + j)).hi)
+                .map(|((&h, &d), &j)| (h * (DD::from_f64(mu) * d * h + j)).hi)
                 .sum::<f64>()
                 / 2.0;
             let ft2 = norm2::<P>(&ft).powi(2);

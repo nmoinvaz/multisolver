@@ -23,7 +23,7 @@ continuation through folds needs. The solvers need nothing else of the problem.
 | `newton` | the Newton step, the damped Newton loop (Deuflhard's correction rule or a residual rule), the chord and Shamanskii methods that reuse a factorization, the Newton matrix factored in double-double or f64 for a residual in quad- or octo-double, and an a-posteriori error estimate from the simplified corrections |
 | `quasi` | Newton's method with Broyden's good updates between its factorizations (Deuflhard's QNERR), one residual and one solve per step and no Jacobian |
 | `gcr` | GMRES in its GCR form on exact Jacobian-vector products, with an adaptive Krylov direction where GMRES stagnates, and the Newton method whose solves it refines from an approximate factorization |
-| `lm` | the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular, handing over to Newton near the root |
+| `lm` | the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular, its steps solved in double-double in any precision, handing over to Newton near the root |
 | `anm` | the asymptotic numerical method: the Taylor series of a solution branch in the problem's parameter, and its radius |
 | `predict` | continuation predictors: Lagrange extrapolation, the cubic Hermite, and the exact tangent |
 | `arclength` | pseudo-arclength continuation through folds: the bordered corrector, step control by the corrector's contraction, fold detection by the tangent's sign, and the fold's location |
