@@ -1,10 +1,12 @@
 //! Newton's method on a problem that is not multiple shooting: a cyclic cubic system written directly as a
 //! [`Problem`], with a manufactured root, in double-double and quad-double, the chord and Shamanskii variants that
-//! reuse its factorization, and its factors in double-double or f64 for quad- and octo-double.
+//! reuse its factorization, its factors in double-double or f64 for quad- and octo-double, and Broyden's updates
+//! (`newton_quasi`) on a linear system and on one whose Jacobian changes by rank one.
 use multisolver::gcr::{newton_refined, GcrOpts};
 use multisolver::multidouble::linalg::ld_for;
-use multisolver::newton::{exact, newton, newton_chord, newton_lowered, Lower, NewtonOpts, NewtonReport};
+use multisolver::newton::{exact, newton, newton_chord, newton_lowered, Damping, Lower, NewtonOpts, NewtonReport};
 use multisolver::prec::{max_abs, nan_max, parts};
+use multisolver::quasi::{newton_quasi, QuasiOpts};
 use multisolver::{Double, Jvp, Native, Octo, Precision, Problem, Quad, DD};
 use std::cell::Cell;
 
@@ -373,4 +375,371 @@ fn lowered_to_its_own_precision_is_newton() {
     );
     let (rc, zc) = lowered_dd(Lower::F64);
     assert_ne!(bits(&ra, &za), bits(&rc, &zc), "control did not fire");
+}
+
+const NR: usize = 12;
+
+/// F(z) = A z + u z_0^3 - b in P, A dense and diagonally dominant, u_i = 1 + cos(i) / 2, b = A z* + u (z*_0)^3 for
+/// z*_i = 0.5 + 0.1 sin(i): its Jacobian A + 3 z_0^2 u e_0^T changes only in column 0, a change of rank one at any z.
+/// It counts the Jacobians formed.
+struct RankOne<P: Precision<Native>> {
+    a: Vec<Vec<P::Scalar>>,
+    u: Vec<P::Scalar>,
+    b: Vec<P::Scalar>,
+    jacobians: Cell<usize>,
+}
+
+impl<P: Precision<Native>> RankOne<P> {
+    fn new() -> (Self, Vec<Vec<f64>>) {
+        let s = |x: f64| P::from_dd(DD::from_f64(x));
+        let a: Vec<Vec<P::Scalar>> = (0..NR)
+            .map(|i| {
+                (0..NR)
+                    .map(|j| {
+                        s(if i == j {
+                            4.0
+                        } else {
+                            0.5 * ((3 * i + 5 * j) as f64).sin()
+                        })
+                    })
+                    .collect()
+            })
+            .collect();
+        let u = (0..NR).map(|i| s(1.0 + 0.5 * (i as f64).cos())).collect();
+        let zs: Vec<P::Scalar> = (0..NR).map(|i| s(0.5 + 0.1 * (i as f64).sin())).collect();
+        let mut pr = RankOne {
+            a,
+            u,
+            b: vec![P::ZERO; NR],
+            jacobians: Cell::new(0),
+        };
+        pr.b = pr.terms(&zs);
+        (pr, to_parts::<P>(&zs))
+    }
+
+    /// A z + u z_0^3
+    fn terms(&self, z: &[P::Scalar]) -> Vec<P::Scalar> {
+        let c = z[0] * z[0] * z[0];
+        (0..NR)
+            .map(|i| P::dot(self.a[i].iter().copied().zip(z.iter().copied())) + self.u[i] * c)
+            .collect()
+    }
+}
+
+impl<P: Precision<Native>> Problem<P> for RankOne<P> {
+    fn len(&self) -> usize {
+        NR
+    }
+    fn residual(&self, z: &[&[f64]], _par: bool) -> Result<Vec<P::Scalar>, String> {
+        let z = scalars::<P>(z);
+        Ok(self.terms(&z).iter().zip(&self.b).map(|(&t, &b)| t - b).collect())
+    }
+    fn jacobian(&self, z: &[&[f64]], _par: bool) -> Result<(Vec<Vec<f64>>, usize), String> {
+        self.jacobians.set(self.jacobians.get() + 1);
+        let z = scalars::<P>(z);
+        let d = P::from_dd(DD::from_f64(3.0)) * z[0] * z[0];
+        let ld = ld_for(NR);
+        let mut c = vec![vec![0.0; ld * NR]; P::PARTS];
+        for i in 0..NR {
+            for j in 0..NR {
+                let v = if j == 0 {
+                    self.a[i][j] + d * self.u[i]
+                } else {
+                    self.a[i][j]
+                };
+                for (q, cq) in c.iter_mut().enumerate() {
+                    cq[j * ld + i] = P::part(v, q);
+                }
+            }
+        }
+        Ok((c, ld))
+    }
+}
+
+/// `newton_quasi` on RankOne in P from z* + 1e-1 (1 + cos(3 i) / 2), or with `chord` the chord method (one
+/// factorization at the start), within `max_iter` steps: (report, max |z - z*|, Jacobians formed)
+fn rank_one<P: Precision<Native>>(tol: f64, max_iter: usize, chord: bool) -> (NewtonReport, f64, usize) {
+    let (pr, zs) = RankOne::<P>::new();
+    let mut z = zs.clone();
+    for (i, v) in z[0].iter_mut().enumerate() {
+        *v += 1e-1 * (1.0 + 0.5 * (3.0 * i as f64).cos());
+    }
+    let opts = NewtonOpts {
+        tol,
+        max_iter,
+        ..Default::default()
+    };
+    let rep = if chord {
+        newton_chord::<P, _>(&pr, &mut z, &opts, max_iter).unwrap()
+    } else {
+        let f = |z: &[&[f64]]| exact::<P, _>(&pr, z, false);
+        let (rep, info) = newton_quasi::<P, _, _>(&pr, &mut z, &opts, &QuasiOpts::default(), f).unwrap();
+        assert_eq!(info.factorizations, pr.jacobians.get());
+        rep
+    };
+    let (zn, zt) = (scalars::<P>(&parts(&z)), scalars::<P>(&parts(&zs)));
+    let err = zn
+        .iter()
+        .zip(&zt)
+        .map(|(&a, &b)| P::to_dd(a - b).hi.abs())
+        .fold(0.0, nan_max);
+    (rep, err, pr.jacobians.get())
+}
+
+/// the check of a run from one Jacobian: converged, max |F| <= ftol, max |z - z*| <= etol, one Jacobian
+fn one_jacobian((rep, err, jac): &(NewtonReport, f64, usize), ftol: f64, etol: f64) -> bool {
+    rep.converged && *rep.fnorm.last().unwrap() <= ftol && *err <= etol && *jac == 1
+}
+
+/// Pass, written before the first run: on RankOne, whose Jacobian changes by rank one, Broyden's updates learn the
+/// change along the steps at a secant's superlinear rate, so from 1e-1 off the root `newton_quasi` converges from one
+/// Jacobian within 12 steps in double-double (max |F| <= 1e-28, max |z - z*| <= 1e-27) and within 16 in quad-double
+/// (1e-60, 1e-59). The control: the chord method, whose contraction is about |A^-1| |u| 3 |z_0^2 - (z*_0)^2|, near
+/// 0.2, needs more than 30 steps and fails both checks within the same steps.
+///
+/// (On the cubic system, whose Jacobian changes in all 12 unknowns, the updates contract at about the chord's rate for
+/// about as many steps as unknowns, as Gay's 2n-step bound has it; there they converged in 14 steps where the chord
+/// method needs 17, which is why the problem here is one of rank one.)
+#[test]
+fn quasi_newton_learns_a_rank_one_change() {
+    let show = |name: &str, r: &(NewtonReport, f64, usize)| {
+        println!(
+            "{name}: converged {} in {} steps, {} Jacobians, max |F| {:.3e}, max |z - z*| {:.3e}, theta {:?}",
+            r.0.converged,
+            r.0.scale.len(),
+            r.2,
+            r.0.fnorm.last().unwrap(),
+            r.1,
+            r.0.theta.iter().map(|t| format!("{t:.1e}")).collect::<Vec<_>>()
+        );
+    };
+    let d = rank_one::<Double>(1e-28, 12, false);
+    show("double-double", &d);
+    assert!(one_jacobian(&d, 1e-28, 1e-27));
+    let q = rank_one::<Quad>(1e-60, 16, false);
+    show("quad-double", &q);
+    assert!(one_jacobian(&q, 1e-60, 1e-59));
+    let dc = rank_one::<Double>(1e-28, 12, true);
+    show("control, chord, double-double", &dc);
+    assert!(!one_jacobian(&dc, 1e-28, 1e-27), "control did not fire");
+    let qc = rank_one::<Quad>(1e-60, 16, true);
+    show("control, chord, quad-double", &qc);
+    assert!(!one_jacobian(&qc, 1e-60, 1e-59), "quad-double control did not fire");
+}
+
+/// Pass, written before the first run: with no updates allowed `newton_quasi` is `newton` bit for bit, in the report
+/// and the solution, and forms as many Jacobians. The control: with the default 20 updates, it differs in both.
+#[test]
+fn quasi_without_updates_is_newton() {
+    let run = |max_updates: usize| {
+        let (pr, zs) = Cubic::<Double>::new(1.0);
+        let mut z = start(&zs);
+        let opts = NewtonOpts {
+            tol: 1e-28,
+            max_iter: 8,
+            ..Default::default()
+        };
+        let q = QuasiOpts {
+            max_updates,
+            ..Default::default()
+        };
+        let (rep, _) =
+            newton_quasi::<Double, _, _>(&pr, &mut z, &opts, &q, |z| exact::<Double, _>(&pr, z, false)).unwrap();
+        (bits(&rep, &z), pr.jacobians.get())
+    };
+    let (ra, za, ja) = chord(0, 8);
+    let want = (bits(&ra, &za), ja);
+    assert_eq!(run(0), want, "newton_quasi without updates differs from newton");
+    let other = run(20);
+    assert!(other.0 != want.0 && other.1 != want.1, "control did not fire");
+}
+
+/// `newton_quasi` refuses the residual rule, whose trials form no simplified corrections, and a theta_max past 1/2.
+#[test]
+fn quasi_refuses_the_residual_rule() {
+    let (pr, zs) = Cubic::<Double>::new(1.0);
+    let f = |z: &[&[f64]]| exact::<Double, _>(&pr, z, false);
+    let mut z = start(&zs);
+    let opts = NewtonOpts {
+        damping: Damping::Residual,
+        ..Default::default()
+    };
+    assert!(newton_quasi::<Double, _, _>(&pr, &mut z, &opts, &QuasiOpts::default(), f).is_err());
+    let q = QuasiOpts {
+        theta_max: 0.6,
+        ..Default::default()
+    };
+    assert!(newton_quasi::<Double, _, _>(&pr, &mut z, &NewtonOpts::default(), &q, f).is_err());
+}
+
+const NL: usize = 4;
+
+/// F(x) = A x - b, A dense and diagonally dominant with entries of nonzero lo parts, b = A x* in double-double for
+/// x*_i = 1 + i / 3; its "Jacobian" is A with the diagonal scaled by 1.1, so that Newton's matrix is 10% off
+struct Linear {
+    a: Vec<Vec<DD>>,
+    b: Vec<DD>,
+}
+
+impl Linear {
+    fn new() -> (Self, Vec<DD>) {
+        Linear::scaled(1.0)
+    }
+
+    /// with x* scaled by c
+    fn scaled(c: f64) -> (Self, Vec<DD>) {
+        let a: Vec<Vec<DD>> = (0..NL)
+            .map(|i| {
+                (0..NL)
+                    .map(|j| {
+                        let v = if i == j {
+                            4.0
+                        } else {
+                            0.5 * ((3 * i + 5 * j) as f64).sin()
+                        };
+                        DD::new(v, v * 1e-17)
+                    })
+                    .collect()
+            })
+            .collect();
+        let xs: Vec<DD> = (0..NL)
+            .map(|i| (DD::from_f64(1.0) + DD::from_f64(i as f64) / DD::from_f64(3.0)).mul_f(c))
+            .collect();
+        let b = a
+            .iter()
+            .map(|row| <Double as Precision<Native>>::dot(row.iter().copied().zip(xs.iter().copied())))
+            .collect();
+        (Linear { a, b }, xs)
+    }
+}
+
+impl Problem<Double> for Linear {
+    fn len(&self) -> usize {
+        NL
+    }
+    fn residual(&self, z: &[&[f64]], _par: bool) -> Result<Vec<DD>, String> {
+        let x = scalars::<Double>(z);
+        Ok(self
+            .a
+            .iter()
+            .zip(&self.b)
+            .map(|(row, &bi)| <Double as Precision<Native>>::dot(row.iter().copied().zip(x.iter().copied())) - bi)
+            .collect())
+    }
+    fn jacobian(&self, _z: &[&[f64]], _par: bool) -> Result<(Vec<Vec<f64>>, usize), String> {
+        let ld = ld_for(NL);
+        let mut c = vec![vec![0.0; ld * NL]; 2];
+        for (i, row) in self.a.iter().enumerate() {
+            for (j, &v) in row.iter().enumerate() {
+                let v = if i == j { v * DD::from_f64(1.1) } else { v };
+                (c[0][j * ld + i], c[1][j * ld + i]) = (v.hi, v.lo);
+            }
+        }
+        Ok((c, ld))
+    }
+}
+
+/// On Linear from x = 0, with Newton's matrix 10% off: `newton_quasi` (`max_updates` 20) or, with `max_updates` 0,
+/// the same matrix at every step: (converged, steps, max |x - x*|, factorizations)
+fn linear(max_updates: usize) -> (bool, usize, f64, usize) {
+    let (pr, xs) = Linear::new();
+    let mut z = vec![vec![0.0; NL]; 2];
+    let opts = NewtonOpts {
+        tol: 1e-28,
+        max_iter: 2 * NL,
+        ..Default::default()
+    };
+    let q = QuasiOpts {
+        max_updates,
+        ..Default::default()
+    };
+    let (rep, info) =
+        newton_quasi::<Double, _, _>(&pr, &mut z, &opts, &q, |z| exact::<Double, _>(&pr, z, false)).unwrap();
+    let err = scalars::<Double>(&parts(&z))
+        .iter()
+        .zip(&xs)
+        .map(|(&a, &b)| (a - b).hi.abs())
+        .fold(0.0, nan_max);
+    (rep.converged, rep.scale.len(), err, info.factorizations)
+}
+
+/// Pass, written before the first run: Broyden's good method ends on a linear system of n unknowns in at most 2 n
+/// steps (Gay, SIAM J. Numer. Anal. 16 (1979) 623), so on the planted 4 x 4 system with Newton's matrix 10% off,
+/// `newton_quasi` converges within 8 steps from one factorization, to max |x - x*| <= 1e-27. The control: the same
+/// matrix without updates contracts by about 0.1 per step, needs about 28 steps, and fails within the 8.
+#[test]
+fn quasi_newton_ends_on_a_linear_system_within_2n_steps() {
+    let check = |(ok, steps, err, fac): (bool, usize, f64, usize)| ok && steps <= 2 * NL && err <= 1e-27 && fac == 1;
+    let r = linear(20);
+    println!(
+        "updates: converged {} in {} steps, max |x - x*| {:.3e}, {} factorizations",
+        r.0, r.1, r.2, r.3
+    );
+    assert!(check(r));
+    let c = linear(0);
+    println!(
+        "control, no updates: converged {} in {} steps, max |x - x*| {:.3e}, {} factorizations",
+        c.0, c.1, c.2, c.3
+    );
+    assert!(!check(c), "control did not fire");
+}
+
+/// Linear, its residual an error at a state that is not finite
+struct Strict(Linear);
+
+impl Problem<Double> for Strict {
+    fn len(&self) -> usize {
+        NL
+    }
+    fn residual(&self, z: &[&[f64]], par: bool) -> Result<Vec<DD>, String> {
+        if z.iter().any(|q| q.iter().any(|v| !v.is_finite())) {
+            return Err("Strict: a state that is not finite".into());
+        }
+        self.0.residual(z, par)
+    }
+    fn jacobian(&self, z: &[&[f64]], par: bool) -> Result<(Vec<Vec<f64>>, usize), String> {
+        self.0.jacobian(z, par)
+    }
+}
+
+/// `newton_quasi` on Strict with x* scaled by c, from x = 0 with Newton's matrix 10% off, to max |F| <= 1e-28 c:
+/// (converged, steps, max |x - x*| / c, steps by the updates)
+fn tiny(c: f64) -> Result<(bool, usize, f64, usize), String> {
+    let (lin, xs) = Linear::scaled(c);
+    let pr = Strict(lin);
+    let mut z = vec![vec![0.0; NL]; 2];
+    let opts = NewtonOpts {
+        tol: 1e-28 * c,
+        max_iter: 40,
+        ..Default::default()
+    };
+    let (rep, info) = newton_quasi::<Double, _, _>(&pr, &mut z, &opts, &QuasiOpts::default(), |z| {
+        exact::<Double, _>(&pr, z, false)
+    })?;
+    let err = scalars::<Double>(&parts(&z))
+        .iter()
+        .zip(&xs)
+        .map(|(&a, &b)| (a - b).hi.abs())
+        .fold(0.0, nan_max);
+    Ok((rep.converged, rep.scale.len(), err / c, info.quasi_steps))
+}
+
+/// Pass, written before the first run: with x* scaled by 1e-150, where the steps fall below 1e-154 during the run and
+/// |s|^2 leaves f64's range, and by 1e-170, where the first step's does, `newton_quasi` never forms a trial state that
+/// is not finite: on Strict, whose residual fails at one, it converges within 40 steps to max |x - x*| <= 1e-27 c.
+/// The control: Strict's residual fails at a NaN.
+#[test]
+fn quasi_newton_at_a_tiny_scale() {
+    for c in [1e-150, 1e-170] {
+        let r = tiny(c);
+        println!("x* scaled by {c:e}: {r:?}");
+        let (ok, steps, err, _) = r.unwrap();
+        assert!(ok && steps <= 40 && err <= 1e-27, "scale {c:e}");
+    }
+    let (lin, _) = Linear::new();
+    let nan = vec![vec![f64::NAN; NL], vec![0.0; NL]];
+    assert!(
+        Strict(lin).residual(&parts(&nan), false).is_err(),
+        "control did not fire"
+    );
 }
