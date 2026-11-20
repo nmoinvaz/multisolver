@@ -21,10 +21,18 @@
 //! once a step's |s|^2 leaves f64's range (a step below about 1e-154), where 1 / |s|^2 is not finite. The
 //! updates' coefficients are formed in P, so the steps carry P's accuracy; the factors may be approximate (an f64
 //! LU, [`crate::newton::Lowered`]), whose mismatch the updates then correct along the steps.
+//!
+//! With [`crate::newton::Scaling::Iterates`] the norms and the inner products of the updates are the scaled ones,
+//! sum_i (a_i / w_i) (b_i / w_i), with the weights of the damped step that started them, fixed while they last (as
+//! QNERR of ZIB NewtonLib keeps its scale): Broyden's good update in that inner product, so that the steps of a
+//! problem do not depend on the units of its unknowns.
 use crate::gcr::recip;
-use crate::newton::{axpy, correction_step, norm2, Damping, Factored, NewtonOpts, NewtonReport, Prev};
+use crate::newton::{
+    axpy, check_opts, correction_step, weights, wnorm, Damping, Factored, NewtonOpts, NewtonReport, Prev,
+};
 use crate::prec::{max_abs, parts};
 use crate::Problem;
+use multidouble::dd::DD;
 use multidouble::precision::Precision;
 use multidouble::simd::Native;
 
@@ -57,18 +65,24 @@ pub struct QuasiInfo {
     pub refused: usize,
 }
 
-/// The updates' state: J_0's factors, the steps s_0..s_k taken since they were formed with 1 / |s_i|^2 in P, and the
-/// simplified correction v = -J_k^-1 F at the current state
+/// The updates' state: J_0's factors, the steps s_0..s_k taken since they were formed with 1 / |s_i|^2 in P, the
+/// simplified correction v = -J_k^-1 F at the current state, and the weights w of the norms with 1 / w_i in P (None:
+/// the 2-norm)
 struct Updates<P: Precision<Native>, F> {
     lu: F,
     s: Vec<Vec<P::Scalar>>,
     inv: Vec<P::Scalar>,
     v: Vec<P::Scalar>,
+    w: Option<Vec<f64>>,
+    r: Option<Vec<P::Scalar>>,
 }
 
-/// a . b in P's accumulator
-fn dot<P: Precision<Native>>(a: &[P::Scalar], b: &[P::Scalar]) -> P::Scalar {
-    P::dot(a.iter().copied().zip(b.iter().copied()))
+/// a . b in P's accumulator, sum_i (a_i r_i) (b_i r_i) with the reciprocal weights r
+fn dot<P: Precision<Native>>(a: &[P::Scalar], b: &[P::Scalar], r: Option<&[P::Scalar]>) -> P::Scalar {
+    match r {
+        None => P::dot(a.iter().copied().zip(b.iter().copied())),
+        Some(r) => P::dot(a.iter().zip(b).zip(r).map(|((&x, &y), &ri)| (x * ri, y * ri))),
+    }
 }
 
 /// whether x is finite
@@ -81,7 +95,7 @@ fn finite<P: Precision<Native>>(x: P::Scalar) -> bool {
 /// and the Newton matrix `factor` forms, and the report records every step, the updates' with lambda 1, their
 /// contraction Theta and |v|. `opts.tol_dz` ends the run after a step whose simplified correction is at most it, as
 /// it ends `newton`'s. With `max_updates` 0 it is `newton_with` bit for bit. `opts.damping` must be
-/// `Damping::Correction`, whose simplified corrections the updates continue.
+/// `Damping::Correction`, whose simplified corrections the updates continue; `opts.scaling` sets the norms of both.
 pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &mut Vec<Vec<f64>>,
@@ -98,20 +112,14 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
             qopts.theta_max
         ));
     }
-    if !(opts.lambda0 > 0.0 && opts.lambda0 <= 1.0) {
-        return Err(format!("newton: lambda0 must lie in (0, 1], not {}", opts.lambda0));
-    }
-    if opts.max_halvings > 1074 {
-        return Err(format!(
-            "newton: max_halvings {} is beyond f64's range (at most 1074)",
-            opts.max_halvings
-        ));
-    }
+    check_opts(opts)?;
     let mut rep = NewtonReport::new();
     let mut info = QuasiInfo::default();
     let mut f = pr.residual(&parts(z), opts.par)?;
     let mut prev: Prev<P> = None;
     let mut up: Option<Updates<P, F>> = None;
+    // the iterate before z, for the damped steps' weights; z itself at the start
+    let mut zp = z.clone();
     for _ in 0..opts.max_iter {
         let fmax = max_abs::<P>(&f);
         rep.fnorm.push(fmax);
@@ -125,27 +133,28 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
         if let Some(u) = up.as_mut() {
             // s_(k+1) = v / (1 - alpha), alpha = s_k . v / |s_k|^2, |alpha| < 1/2
             let k = u.s.len() - 1;
-            let alpha = dot::<P>(&u.s[k], &u.v) * u.inv[k];
+            let (w, r) = (u.w.as_deref(), u.r.as_deref());
+            let alpha = dot::<P>(&u.s[k], &u.v, r) * u.inv[k];
             let c = recip::<P>(P::ONE - alpha);
             let s: Vec<P::Scalar> = u.v.iter().map(|&x| x * c).collect();
             let zt = axpy::<P>(&parts(z), &s, 1.0);
             let ft = pr.residual(&parts(&zt), opts.par)?;
             // -J_(k+1)^-1 F(z + s): J_0's solve, then the updates i = 1..=k+1
             let mut v = u.lu.try_solve_neg(&ft)?;
-            u.inv.push(recip::<P>(dot::<P>(&s, &s)));
+            u.inv.push(recip::<P>(dot::<P>(&s, &s, r)));
             u.s.push(s);
             for i in 1..u.s.len() {
-                let c = dot::<P>(&u.s[i - 1], &v) * u.inv[i - 1];
+                let c = dot::<P>(&u.s[i - 1], &v, r) * u.inv[i - 1];
                 v.iter_mut().zip(&u.s[i]).for_each(|(x, &si)| *x = *x + c * si);
             }
-            let nv = norm2::<P>(&v);
-            let theta = nv / norm2::<P>(&u.s[k + 1]);
+            let nv = wnorm::<P>(&v, w);
+            let theta = nv / wnorm::<P>(&u.s[k + 1], w);
             if theta < qopts.theta_max {
                 rep.scale.push(1.0);
                 rep.theta.push(theta);
                 rep.dz_bar.push(nv);
                 info.quasi_steps += 1;
-                *z = zt;
+                zp = std::mem::replace(z, zt);
                 f = ft;
                 u.v = v;
                 if opts.tol_dz > 0.0 && nv <= opts.tol_dz {
@@ -164,31 +173,37 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
         }
         let lu = factor(&parts(z))?;
         info.factorizations += 1;
-        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, opts)? else {
+        let w = weights(opts.scaling, &parts(z), &parts(&zp));
+        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? else {
             rep.fnorm.push(fmax);
             return Ok((rep, info));
         };
         rep.scale.push(t.lam);
         rep.theta.push(t.theta);
         rep.dz_bar.push(t.nbar);
-        *z = t.zt;
+        zp = std::mem::replace(z, t.zt);
         f = t.ft;
         if opts.tol_dz > 0.0 && t.lam == 1.0 && t.nbar <= opts.tol_dz {
             rep.fnorm.push(max_abs::<P>(&f));
             rep.converged = true;
             return Ok((rep, info));
         }
-        let inv = recip::<P>(dot::<P>(&t.dz, &t.dz));
+        let r: Option<Vec<P::Scalar>> = w
+            .as_ref()
+            .map(|w| w.iter().map(|&x| P::from_dd(DD::from_f64(1.0 / x))).collect());
+        let inv = recip::<P>(dot::<P>(&t.dz, &t.dz, r.as_deref()));
         if qopts.max_updates > 0 && t.lam == 1.0 && t.theta < qopts.theta_max && finite::<P>(inv) {
             up = Some(Updates {
                 lu,
                 inv: vec![inv],
                 s: vec![t.dz],
                 v: t.bar,
+                w,
+                r,
             });
             prev = None;
         } else {
-            prev = Some((t.ndz, t.bar, t.lam));
+            prev = Some((t.dz, t.bar, t.lam));
         }
     }
     let fmax = max_abs::<P>(&f);

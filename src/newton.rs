@@ -9,10 +9,18 @@
 //! orders of magnitude takes the steps of its unscaled copy. The residual rule, halving while max |F| does not fall,
 //! is kept for comparison.
 //!
+//! The corrections' norm is the 2-norm by default, in which the largest unknowns dominate. With
+//! [`Scaling::Iterates`] it is NLEQ-ERR's scaled norm |v| = (sum_i (v_i / w_i)^2 / n)^(1/2), the weights
+//! w_i = max(floor, (|z_i| + |z'_i|) / 2) formed anew at each step from its iterate z and the one before it z' (z'
+//! = z at the first), as `nleqerr_rescale` of NLEQ_ERR forms them (Weimann, ZIB NewtonLib 2006, the code of
+//! Deuflhard's book); the last step's corrections enter the next lambda's prediction in the new weights. Each unknown
+//! is then measured relative to its size above the floor, so a problem whose unknowns differ by orders of magnitude
+//! takes the steps of its copy in unknowns of one size, and `tol_dz` is a relative tolerance.
+//!
 //! The Newton matrix need not be factored in P: with the residual in P, factors of the Jacobian rounded to
 //! double-double or f64 ([`Lowered`], [`newton_lowered`]) converge to P's accuracy linearly, at a contraction of
 //! about cond(J) 2^-104 or 2^-53 per step (iterative refinement; Moler, J. ACM 14 (1967) 316).
-use crate::prec::{max_abs, parts};
+use crate::prec::{max_abs, nan_max, parts};
 use crate::Problem;
 use multidouble::dd::DD;
 use multidouble::linalg::DDLu;
@@ -40,13 +48,24 @@ pub enum Damping {
     Residual,
 }
 
+/// The norm in which the correction rule measures its corrections (the module's documentation)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Scaling {
+    /// the 2-norm of the unknowns as they are
+    None,
+    /// NLEQ-ERR's scaled norm, the weights w_i = max(floor, (|z_i| + |z'_i|) / 2) of each step's iterate z and the one
+    /// before it z'; `floor` (a positive normal f64) is the size below which an unknown counts as small in absolute
+    /// terms
+    Iterates { floor: f64 },
+}
+
 /// The settings of [`newton`]
 #[derive(Clone, Copy, Debug)]
 pub struct NewtonOpts {
     /// stop when max |F| is at most this
     pub tol: f64,
     /// with the correction rule, also stop after a full step whose simplified correction has a norm at most this (0:
-    /// off); unlike max |F| it does not depend on the rows' scaling
+    /// off); unlike max |F| it does not depend on the rows' scaling, and with `Scaling::Iterates` it is relative
     pub tol_dz: f64,
     /// Newton steps at most
     pub max_iter: usize,
@@ -56,6 +75,8 @@ pub struct NewtonOpts {
     /// the correction rule's first lambda (1 for a mildly nonlinear problem)
     pub lambda0: f64,
     pub damping: Damping,
+    /// the correction rule's norm of the corrections
+    pub scaling: Scaling,
     pub par: bool,
 }
 
@@ -68,14 +89,15 @@ impl Default for NewtonOpts {
             max_halvings: 10,
             lambda0: 1.0,
             damping: Damping::Correction,
+            scaling: Scaling::None,
             par: true,
         }
     }
 }
 
 /// What [`newton`] did: max |F| before each step and at the end, each step's lambda, the correction rule's
-/// contraction theta = |dz_bar| / |dz| and simplified correction |dz_bar| = |J(z_k)^-1 F(z_(k+1))| (2-norms) for each
-/// step taken (both empty with the residual rule), and whether it converged.
+/// contraction theta = |dz_bar| / |dz| and simplified correction |dz_bar| = |J(z_k)^-1 F(z_(k+1))| (in the norm of
+/// [`NewtonOpts::scaling`]) for each step taken (both empty with the residual rule), and whether it converged.
 #[derive(Clone, Debug)]
 pub struct NewtonReport {
     pub fnorm: Vec<f64>,
@@ -86,7 +108,8 @@ pub struct NewtonReport {
 }
 
 impl NewtonReport {
-    /// The error of the final iterate, |z - z*| in the 2-norm, estimated by the last step's simplified correction
+    /// The error of the final iterate, |z - z*| in the norm of [`NewtonOpts::scaling`] (the 2-norm by default, a
+    /// relative error with `Scaling::Iterates`), estimated by the last step's simplified correction
     /// |M^-1 F(z)|, formed with the step's factors M (Deuflhard, Newton Methods for Nonlinear Problems, Springer 2004).
     /// With the exact Jacobian's factors (`newton`), M approaches J(z*) and the correction equals -(z - z*) to first
     /// order. With factors frozen at another point or approximate (`newton_chord`, `reuse`, `newton_with`), it is
@@ -133,6 +156,57 @@ pub(crate) fn norm2<P: Precision<Native>>(v: &[P::Scalar]) -> f64 {
         return m;
     }
     m * v.iter().map(|&x| P::to_dd(x).hi / m).map(|x| x * x).sum::<f64>().sqrt()
+}
+
+/// NLEQ-ERR's weights of the step from z' to z, w_i = max(floor, (|z_i| + |z'_i|) / 2) from the hi parts, halved
+/// before the sum so that it cannot overflow; None for the 2-norm
+pub(crate) fn weights(scaling: Scaling, z: &[&[f64]], zp: &[&[f64]]) -> Option<Vec<f64>> {
+    match scaling {
+        Scaling::None => None,
+        Scaling::Iterates { floor } => Some(
+            z[0].iter()
+                .zip(zp[0])
+                .map(|(&a, &b)| floor.max(0.5 * a.abs() + 0.5 * b.abs()))
+                .collect(),
+        ),
+    }
+}
+
+/// The norm of the correction rule: `norm2` without weights, else (sum_i (v_i / w_i)^2 / n)^(1/2) from the hi parts,
+/// scaled by the largest |v_i / w_i| as `norm2`; NaN when any is NaN
+pub(crate) fn wnorm<P: Precision<Native>>(v: &[P::Scalar], w: Option<&[f64]>) -> f64 {
+    let Some(w) = w else {
+        return norm2::<P>(v);
+    };
+    let x: Vec<f64> = v.iter().zip(w).map(|(&a, &b)| P::to_dd(a).hi / b).collect();
+    let m = x.iter().fold(0.0, |m, &a| nan_max(m, a.abs()));
+    if m == 0.0 || !m.is_finite() {
+        return m;
+    }
+    m * (x.iter().map(|&a| (a / m) * (a / m)).sum::<f64>() / x.len() as f64).sqrt()
+}
+
+/// The checks of `opts` that every damped loop makes
+pub(crate) fn check_opts(opts: &NewtonOpts) -> Result<(), String> {
+    if !(opts.lambda0 > 0.0 && opts.lambda0 <= 1.0) {
+        return Err(format!("newton: lambda0 must lie in (0, 1], not {}", opts.lambda0));
+    }
+    // 0.5^1074 is the smallest positive f64; past it the minimum step length would be zero
+    if opts.max_halvings > 1074 {
+        return Err(format!(
+            "newton: max_halvings {} is beyond f64's range (at most 1074)",
+            opts.max_halvings
+        ));
+    }
+    if let Scaling::Iterates { floor } = opts.scaling {
+        // a normal floor keeps every 1 / w_i finite
+        if !(floor > 0.0 && floor.is_normal()) {
+            return Err(format!(
+                "newton: the scaling's floor must be a positive normal f64, not {floor}"
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// -J^-1 r with the factored J
@@ -337,16 +411,7 @@ pub fn newton_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
     opts: &NewtonOpts,
     factor: impl Fn(&[&[f64]]) -> Result<F, String>,
 ) -> Result<NewtonReport, String> {
-    if !(opts.lambda0 > 0.0 && opts.lambda0 <= 1.0) {
-        return Err(format!("newton: lambda0 must lie in (0, 1], not {}", opts.lambda0));
-    }
-    // 0.5^1074 is the smallest positive f64; past it the minimum step length would be zero
-    if opts.max_halvings > 1074 {
-        return Err(format!(
-            "newton: max_halvings {} is beyond f64's range (at most 1074)",
-            opts.max_halvings
-        ));
-    }
+    check_opts(opts)?;
     match opts.damping {
         Damping::Correction => newton_correction::<P, Pr, F>(pr, z, opts, factor),
         Damping::Residual => newton_residual::<P, Pr, F>(pr, z, opts, factor),
@@ -356,7 +421,8 @@ pub fn newton_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
 /// The error-oriented global Newton method (Deuflhard 2004, section 3.3.3): the prediction `lambda = min(1,
 /// |dz_prev| |dz_bar_prev| lambda_prev / (|dz_bar_prev - dz| |dz|))`, the trial's estimate `mu = lambda^2 |dz| / (2
 /// |dz_bar - (1 - lambda) dz|)`, a trial accepted when `theta < 1 - lambda / 4` and otherwise retried at
-/// `min(mu, lambda / 2)`, and one retry per step at `min(1, mu)` when that is 4 lambda or more.
+/// `min(mu, lambda / 2)`, and one retry per step at `min(1, mu)` when that is 4 lambda or more, all norms those of
+/// `opts.scaling` at the step.
 fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &mut Vec<Vec<f64>>,
@@ -366,6 +432,8 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
     let mut rep = NewtonReport::new();
     let mut f = pr.residual(&parts(z), opts.par)?;
     let mut prev: Prev<P> = None;
+    // the iterate before z, for the weights; z itself at the start
+    let mut zp = z.clone();
     for _ in 0..opts.max_iter {
         let fmax = max_abs::<P>(&f);
         rep.fnorm.push(fmax);
@@ -377,21 +445,22 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
             return Ok(rep);
         }
         let lu = factor(&parts(z))?;
-        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, opts)? else {
+        let w = weights(opts.scaling, &parts(z), &parts(&zp));
+        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? else {
             rep.fnorm.push(fmax);
             return Ok(rep);
         };
         rep.scale.push(t.lam);
         rep.theta.push(t.theta);
         rep.dz_bar.push(t.nbar);
-        *z = t.zt;
+        zp = std::mem::replace(z, t.zt);
         f = t.ft;
         if opts.tol_dz > 0.0 && t.lam == 1.0 && t.nbar <= opts.tol_dz {
             rep.fnorm.push(max_abs::<P>(&f));
             rep.converged = true;
             return Ok(rep);
         }
-        prev = Some((t.ndz, t.bar, t.lam));
+        prev = Some((t.dz, t.bar, t.lam));
     }
     let fmax = max_abs::<P>(&f);
     rep.fnorm.push(fmax);
@@ -399,12 +468,11 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
     Ok(rep)
 }
 
-/// A step of the correction rule taken from z: its lambda, the Newton correction dz and |dz|, the trial state
-/// z + lambda dz and its residual, and the trial's simplified correction dz_bar, |dz_bar| and theta = |dz_bar| / |dz|
+/// A step of the correction rule taken from z: its lambda, the Newton correction dz, the trial state z + lambda dz
+/// and its residual, and the trial's simplified correction dz_bar, |dz_bar| and theta = |dz_bar| / |dz|
 pub(crate) struct Taken<P: Precision<Native>> {
     pub lam: f64,
     pub dz: Vec<P::Scalar>,
-    pub ndz: f64,
     pub zt: Vec<Vec<f64>>,
     pub ft: Vec<P::Scalar>,
     pub bar: Vec<P::Scalar>,
@@ -412,27 +480,34 @@ pub(crate) struct Taken<P: Precision<Native>> {
     pub theta: f64,
 }
 
-/// |dz|, dz_bar and lambda of the last step taken, from which the correction rule predicts the next lambda
-pub(crate) type Prev<P> = Option<(f64, Vec<<P as Precision<Native>>::Scalar>, f64)>;
+/// dz, dz_bar and lambda of the last step taken, from which the correction rule predicts the next lambda
+pub(crate) type Prev<P> = Option<(
+    Vec<<P as Precision<Native>>::Scalar>,
+    Vec<<P as Precision<Native>>::Scalar>,
+    f64,
+)>;
 
 /// One step of the correction rule from z, where the residual is f and `lu` the factors: the trials of
-/// `newton_correction`'s documentation until one is accepted, or None once lambda falls below 2^-max_halvings
+/// `newton_correction`'s documentation until one is accepted, or None once lambda falls below 2^-max_halvings; the
+/// norms are `wnorm`'s with the weights w (the last step's corrections among them, as NLEQ-ERR rescales them)
 pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &[&[f64]],
     f: &[P::Scalar],
     lu: &F,
     prev: &Prev<P>,
+    w: Option<&[f64]>,
     opts: &NewtonOpts,
 ) -> Result<Option<Taken<P>>, String> {
     let lam_min = 0.5f64.powi(opts.max_halvings as i32);
     let dz = lu.try_solve_neg(f)?;
-    let ndz = norm2::<P>(&dz);
+    let ndz = wnorm::<P>(&dz, w);
     let mut lam = match prev {
         None => opts.lambda0,
-        Some((n0, bar0, lam0)) => {
+        Some((dz0, bar0, lam0)) => {
             let diff: Vec<P::Scalar> = bar0.iter().zip(&dz).map(|(&a, &b)| a - b).collect();
-            let mu = n0 * norm2::<P>(bar0) * lam0 / (norm2::<P>(&diff) * ndz);
+            let n0 = wnorm::<P>(dz0, w);
+            let mu = n0 * wnorm::<P>(bar0, w) * lam0 / (wnorm::<P>(&diff, w) * ndz);
             if mu.is_nan() {
                 1.0
             } else {
@@ -448,11 +523,11 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
         let zt = axpy::<P>(z, &dz, lam);
         let ft = pr.residual(&parts(&zt), opts.par)?;
         let bar = lu.try_solve_neg(&ft)?;
-        let nbar = norm2::<P>(&bar);
+        let nbar = wnorm::<P>(&bar, w);
         let theta = nbar / ndz;
         let rest = P::from_dd(DD::from_f64(1.0 - lam));
-        let w: Vec<P::Scalar> = bar.iter().zip(&dz).map(|(&b, &d)| b - d * rest).collect();
-        let mu = 0.5 * ndz * lam * lam / norm2::<P>(&w);
+        let d: Vec<P::Scalar> = bar.iter().zip(&dz).map(|(&b, &d)| b - d * rest).collect();
+        let mu = 0.5 * ndz * lam * lam / wnorm::<P>(&d, w);
         if theta.is_nan() || theta >= 1.0 - lam / 4.0 {
             lam = mu.min(lam / 2.0);
             continue;
@@ -466,7 +541,6 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
         return Ok(Some(Taken {
             lam,
             dz,
-            ndz,
             zt,
             ft,
             bar,
