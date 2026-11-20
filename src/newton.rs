@@ -96,7 +96,7 @@ impl NewtonReport {
         self.dz_bar.last().copied()
     }
 
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         NewtonReport {
             fnorm: Vec::new(),
             scale: Vec::new(),
@@ -108,7 +108,7 @@ impl NewtonReport {
 }
 
 /// z + s dz in the precision, part by part, dz given as scalars
-fn axpy<P: Precision<Native>>(z: &[&[f64]], dz: &[P::Scalar], s: f64) -> Vec<Vec<f64>> {
+pub(crate) fn axpy<P: Precision<Native>>(z: &[&[f64]], dz: &[P::Scalar], s: f64) -> Vec<Vec<f64>> {
     let l = z[0].len();
     let mut out: Vec<Vec<f64>> = (0..P::PARTS).map(|_| vec![0.0; l]).collect();
     let sc = P::from_dd(DD::from_f64(s));
@@ -364,10 +364,8 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
     factor: impl Fn(&[&[f64]]) -> Result<F, String>,
 ) -> Result<NewtonReport, String> {
     let mut rep = NewtonReport::new();
-    let lam_min = 0.5f64.powi(opts.max_halvings as i32);
     let mut f = pr.residual(&parts(z), opts.par)?;
-    // |dz|, dz_bar and lambda of the last step taken
-    let mut prev: Option<(f64, Vec<P::Scalar>, f64)> = None;
+    let mut prev: Prev<P> = None;
     for _ in 0..opts.max_iter {
         let fmax = max_abs::<P>(&f);
         rep.fnorm.push(fmax);
@@ -379,62 +377,103 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
             return Ok(rep);
         }
         let lu = factor(&parts(z))?;
-        let dz = lu.try_solve_neg(&f)?;
-        let ndz = norm2::<P>(&dz);
-        let mut lam = match &prev {
-            None => opts.lambda0,
-            Some((n0, bar0, lam0)) => {
-                let diff: Vec<P::Scalar> = bar0.iter().zip(&dz).map(|(&a, &b)| a - b).collect();
-                let mu = n0 * norm2::<P>(bar0) * lam0 / (norm2::<P>(&diff) * ndz);
-                if mu.is_nan() {
-                    1.0
-                } else {
-                    mu.min(1.0)
-                }
-            }
+        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, opts)? else {
+            rep.fnorm.push(fmax);
+            return Ok(rep);
         };
-        let mut raised = false;
-        loop {
-            if lam.is_nan() || lam < lam_min || lam == 0.0 {
-                rep.fnorm.push(fmax);
-                return Ok(rep);
-            }
-            let zt = axpy::<P>(&parts(z), &dz, lam);
-            let ft = pr.residual(&parts(&zt), opts.par)?;
-            let bar = lu.try_solve_neg(&ft)?;
-            let nbar = norm2::<P>(&bar);
-            let theta = nbar / ndz;
-            let rest = P::from_dd(DD::from_f64(1.0 - lam));
-            let w: Vec<P::Scalar> = bar.iter().zip(&dz).map(|(&b, &d)| b - d * rest).collect();
-            let mu = 0.5 * ndz * lam * lam / norm2::<P>(&w);
-            if theta.is_nan() || theta >= 1.0 - lam / 4.0 {
-                lam = mu.min(lam / 2.0);
-                continue;
-            }
-            let lam_new = mu.min(1.0);
-            if !raised && lam < 1.0 && lam_new >= 4.0 * lam {
-                raised = true;
-                lam = lam_new;
-                continue;
-            }
-            rep.scale.push(lam);
-            rep.theta.push(theta);
-            rep.dz_bar.push(nbar);
-            *z = zt;
-            f = ft;
-            if opts.tol_dz > 0.0 && lam == 1.0 && nbar <= opts.tol_dz {
-                rep.fnorm.push(max_abs::<P>(&f));
-                rep.converged = true;
-                return Ok(rep);
-            }
-            prev = Some((ndz, bar, lam));
-            break;
+        rep.scale.push(t.lam);
+        rep.theta.push(t.theta);
+        rep.dz_bar.push(t.nbar);
+        *z = t.zt;
+        f = t.ft;
+        if opts.tol_dz > 0.0 && t.lam == 1.0 && t.nbar <= opts.tol_dz {
+            rep.fnorm.push(max_abs::<P>(&f));
+            rep.converged = true;
+            return Ok(rep);
         }
+        prev = Some((t.ndz, t.bar, t.lam));
     }
     let fmax = max_abs::<P>(&f);
     rep.fnorm.push(fmax);
     rep.converged = fmax <= opts.tol;
     Ok(rep)
+}
+
+/// A step of the correction rule taken from z: its lambda, the Newton correction dz and |dz|, the trial state
+/// z + lambda dz and its residual, and the trial's simplified correction dz_bar, |dz_bar| and theta = |dz_bar| / |dz|
+pub(crate) struct Taken<P: Precision<Native>> {
+    pub lam: f64,
+    pub dz: Vec<P::Scalar>,
+    pub ndz: f64,
+    pub zt: Vec<Vec<f64>>,
+    pub ft: Vec<P::Scalar>,
+    pub bar: Vec<P::Scalar>,
+    pub nbar: f64,
+    pub theta: f64,
+}
+
+/// |dz|, dz_bar and lambda of the last step taken, from which the correction rule predicts the next lambda
+pub(crate) type Prev<P> = Option<(f64, Vec<<P as Precision<Native>>::Scalar>, f64)>;
+
+/// One step of the correction rule from z, where the residual is f and `lu` the factors: the trials of
+/// `newton_correction`'s documentation until one is accepted, or None once lambda falls below 2^-max_halvings
+pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
+    pr: &Pr,
+    z: &[&[f64]],
+    f: &[P::Scalar],
+    lu: &F,
+    prev: &Prev<P>,
+    opts: &NewtonOpts,
+) -> Result<Option<Taken<P>>, String> {
+    let lam_min = 0.5f64.powi(opts.max_halvings as i32);
+    let dz = lu.try_solve_neg(f)?;
+    let ndz = norm2::<P>(&dz);
+    let mut lam = match prev {
+        None => opts.lambda0,
+        Some((n0, bar0, lam0)) => {
+            let diff: Vec<P::Scalar> = bar0.iter().zip(&dz).map(|(&a, &b)| a - b).collect();
+            let mu = n0 * norm2::<P>(bar0) * lam0 / (norm2::<P>(&diff) * ndz);
+            if mu.is_nan() {
+                1.0
+            } else {
+                mu.min(1.0)
+            }
+        }
+    };
+    let mut raised = false;
+    loop {
+        if lam.is_nan() || lam < lam_min || lam == 0.0 {
+            return Ok(None);
+        }
+        let zt = axpy::<P>(z, &dz, lam);
+        let ft = pr.residual(&parts(&zt), opts.par)?;
+        let bar = lu.try_solve_neg(&ft)?;
+        let nbar = norm2::<P>(&bar);
+        let theta = nbar / ndz;
+        let rest = P::from_dd(DD::from_f64(1.0 - lam));
+        let w: Vec<P::Scalar> = bar.iter().zip(&dz).map(|(&b, &d)| b - d * rest).collect();
+        let mu = 0.5 * ndz * lam * lam / norm2::<P>(&w);
+        if theta.is_nan() || theta >= 1.0 - lam / 4.0 {
+            lam = mu.min(lam / 2.0);
+            continue;
+        }
+        let lam_new = mu.min(1.0);
+        if !raised && lam < 1.0 && lam_new >= 4.0 * lam {
+            raised = true;
+            lam = lam_new;
+            continue;
+        }
+        return Ok(Some(Taken {
+            lam,
+            dz,
+            ndz,
+            zt,
+            ft,
+            bar,
+            nbar,
+            theta,
+        }));
+    }
 }
 
 /// The residual rule: steps halved while max |F| does not fall, at most `max_halvings` times, then taken.

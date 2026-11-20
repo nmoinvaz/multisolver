@@ -5,6 +5,7 @@
 //!
 //! * [`newton`]: the Newton step and the damped Newton loop, the chord and Shamanskii methods that reuse its
 //!   factors, and the Newton matrix factored in double-double or f64 for a residual in P;
+//! * [`quasi`]: Newton's method with Broyden's updates between its factorizations (Deuflhard's QNERR);
 //! * [`gcr`]: a preconditioned Krylov solver (GMRES in its GCR form) on exact Jacobian-vector products, and the Newton
 //!   method whose steps it refines from an approximate factorization;
 //! * [`lm`]: the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular;
@@ -55,6 +56,7 @@ pub mod lm;
 pub mod newton;
 pub mod prec;
 pub mod predict;
+pub mod quasi;
 pub mod singularity;
 pub mod subspace;
 pub mod winding;
