@@ -1,11 +1,11 @@
 //! Newton's method on a problem that is not multiple shooting: a cyclic cubic system written directly as a
-//! [`Problem`], with a manufactured root, in double-double and quad-double, and the chord and Shamanskii variants that
-//! reuse its factorization.
+//! [`Problem`], with a manufactured root, in double-double and quad-double, the chord and Shamanskii variants that
+//! reuse its factorization, and its factors in double-double or f64 for quad- and octo-double.
 use multisolver::gcr::{newton_refined, GcrOpts};
 use multisolver::multidouble::linalg::ld_for;
-use multisolver::newton::{exact, newton, newton_chord, NewtonOpts, NewtonReport};
+use multisolver::newton::{exact, newton, newton_chord, newton_lowered, Lower, NewtonOpts, NewtonReport};
 use multisolver::prec::{max_abs, nan_max, parts};
-use multisolver::{Double, Jvp, Native, Precision, Problem, Quad, DD};
+use multisolver::{Double, Jvp, Native, Octo, Precision, Problem, Quad, DD};
 use std::cell::Cell;
 
 const N: usize = 12;
@@ -280,4 +280,97 @@ fn refined_newton_control_wrong_products_do_not_converge() {
     let (ok, steps, f, _) = refined(1.1);
     println!("control, products 10% off: converged {ok} in {steps} steps, max |F| {f:.3e}");
     assert!(!ok, "control did not fire");
+}
+
+/// Newton in P from the start with the Jacobian, its diagonal scaled by `diag_err`, rounded by `to` and factored
+/// (`newton_lowered`): (converged, steps, max |F| at the end, max |z - z*|)
+fn run_lowered<P: Precision<Native>>(diag_err: f64, tol: f64, to: Lower, max_iter: usize) -> (bool, usize, f64, f64) {
+    let (pr, zs) = Cubic::<P>::new(diag_err);
+    let mut z = start(&zs);
+    let opts = NewtonOpts {
+        tol,
+        max_iter,
+        ..Default::default()
+    };
+    let rep = newton_lowered::<P, _>(&pr, &mut z, &opts, to).unwrap();
+    let (zn, zt) = (scalars::<P>(&parts(&z)), scalars::<P>(&parts(&zs)));
+    let err = zn
+        .iter()
+        .zip(&zt)
+        .map(|(&a, &b)| P::to_dd(a - b).hi.abs())
+        .fold(0.0, nan_max);
+    let f = max_abs::<P>(&pr.residual(&parts(&z), false).unwrap());
+    (rep.converged, rep.scale.len(), f, err)
+}
+
+/// Pass, written before the first run: with the Jacobian rounded to double-double, whose factors leave a contraction
+/// of about cond(J) 2^-104 on top of the quadratic rate, Newton in quad-double converges within 8 steps (exact
+/// Newton's bound) to max |F| <= 1e-60 with max |z - z*| <= 1e-59, and in octo-double within 10 steps to
+/// max |F| <= 1e-120 with max |z - z*| <= 1e-119. With the Jacobian rounded to f64 (a contraction of about
+/// cond(J) 2^-53), quad-double converges within 10 steps to the same bounds. The control: the Jacobian's diagonal 10%
+/// off, rounded to double-double, contracts by about 0.1 per step and fails all three checks within 8 steps.
+#[test]
+fn lowered_newton_reaches_the_precision() {
+    let case = |name: &str, r: (bool, usize, f64, f64), ftol: f64, etol: f64, want: [bool; 3]| {
+        let (ok, steps, f, err) = r;
+        println!("{name}: converged {ok} in {steps} steps, max |F| {f:.3e}, max |z - z*| {err:.3e}");
+        assert_eq!(checks((ok, f, err), ftol, etol), want, "{name}");
+    };
+    case(
+        "quad-double, factors in double-double",
+        run_lowered::<Quad>(1.0, 1e-60, Lower::Double, 8),
+        1e-60,
+        1e-59,
+        [true; 3],
+    );
+    case(
+        "octo-double, factors in double-double",
+        run_lowered::<Octo>(1.0, 1e-120, Lower::Double, 10),
+        1e-120,
+        1e-119,
+        [true; 3],
+    );
+    case(
+        "quad-double, factors in f64",
+        run_lowered::<Quad>(1.0, 1e-60, Lower::F64, 10),
+        1e-60,
+        1e-59,
+        [true; 3],
+    );
+    case(
+        "control, diagonal 10% off, factors in double-double",
+        run_lowered::<Quad>(1.1, 1e-60, Lower::Double, 8),
+        1e-60,
+        1e-59,
+        [false; 3],
+    );
+}
+
+/// `newton_lowered` in double-double from the start, its Jacobian rounded by `to`: (report, final z)
+fn lowered_dd(to: Lower) -> (NewtonReport, Vec<Vec<f64>>) {
+    let (pr, zs) = Cubic::<Double>::new(1.0);
+    let mut z = start(&zs);
+    let opts = NewtonOpts {
+        tol: 1e-28,
+        max_iter: 8,
+        ..Default::default()
+    };
+    let rep = newton_lowered::<Double, _>(&pr, &mut z, &opts, to).unwrap();
+    (rep, z)
+}
+
+/// Pass, written before the first run: in double-double the Jacobian rounded to double-double is the Jacobian, so
+/// `newton_lowered` with `Lower::Double` is `newton` bit for bit, in the report and the solution. The control: rounded
+/// to f64, the report and the solution differ.
+#[test]
+fn lowered_to_its_own_precision_is_newton() {
+    let (ra, za, _) = chord(0, 8);
+    let (rb, zb) = lowered_dd(Lower::Double);
+    assert_eq!(
+        bits(&ra, &za),
+        bits(&rb, &zb),
+        "newton_lowered(Double) differs from newton"
+    );
+    let (rc, zc) = lowered_dd(Lower::F64);
+    assert_ne!(bits(&ra, &za), bits(&rc, &zc), "control did not fire");
 }

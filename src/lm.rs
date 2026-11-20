@@ -15,7 +15,7 @@
 //! G is formed once per step in P, on the lanes of P (8 rows of a column per lane vector, the dot accumulator of the
 //! lane type), only its upper triangle and with its columns in parallel; each mu tried costs one factorization of
 //! G + mu D.
-use crate::newton::{newton, norm2, NewtonOpts, NewtonReport};
+use crate::newton::{exact, newton_with, norm2, Factored, NewtonOpts, NewtonReport};
 use crate::prec::{max_abs, parts};
 use crate::Problem;
 use multidouble::dd::DD;
@@ -153,6 +153,18 @@ pub fn levenberg_marquardt<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
     z: &mut Vec<Vec<f64>>,
     opts: &LmOpts,
 ) -> Result<LmReport, String> {
+    levenberg_marquardt_with::<P, Pr, _>(pr, z, opts, |z| exact::<P, Pr>(pr, z, opts.newton.par))
+}
+
+/// `levenberg_marquardt` with the Newton run it hands over to factoring its Newton matrix by `factor`
+/// ([`newton_with`]), such as the Jacobian rounded to double-double ([`crate::newton::Lowered`]). With the exact
+/// factors it is `levenberg_marquardt`, bit for bit.
+pub fn levenberg_marquardt_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
+    pr: &Pr,
+    z: &mut Vec<Vec<f64>>,
+    opts: &LmOpts,
+    factor: impl Fn(&[&[f64]]) -> Result<F, String>,
+) -> Result<LmReport, String> {
     let n = pr.len();
     let mut rep = LmReport::default();
     let mut f = pr.residual(&parts(z), opts.par)?;
@@ -177,7 +189,7 @@ pub fn levenberg_marquardt<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
                 tol: opts.tol,
                 ..opts.newton
             };
-            if let Ok(nr) = newton::<P, Pr>(pr, &mut zn, &nopts) {
+            if let Ok(nr) = newton_with::<P, Pr, F>(pr, &mut zn, &nopts, &factor) {
                 let last = nr.fnorm.last().copied();
                 let done = nr.converged && last.is_some_and(|f| f <= opts.tol);
                 rep.newton = Some(nr);

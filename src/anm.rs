@@ -9,7 +9,7 @@
 //!
 //! The series is valid up to about [`Branch::radius`], Cochelin's estimate (delta |z_1| / |z_N|)^(1 / (N - 1)), where
 //! the last term would be delta times the first.
-use crate::newton::exact;
+use crate::newton::{exact, Factored};
 use crate::prec::{max_abs, parts};
 use crate::{Jvp, ResidualJet};
 use multidouble::dd::DD;
@@ -40,7 +40,25 @@ pub fn series<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized>(
     refine: usize,
     par: bool,
 ) -> Result<Branch<P>, String> {
-    let lu = exact::<P, Pr>(pr, z0, par)?.0;
+    series_with::<P, Pr, _>(pr, z0, order, refine, par, |z| exact::<P, Pr>(pr, z, par))
+}
+
+/// `series` with the Jacobian at z0 factored by `factor`, such as in double-double or f64
+/// ([`crate::newton::Lowered`]): each refinement contracts a solve's error by the factors' mismatch, so a few reach
+/// P's accuracy. With the exact factors it is `series`, bit for bit.
+pub fn series_with<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized, F: Factored<P>>(
+    pr: &Pr,
+    z0: &[&[f64]],
+    order: usize,
+    refine: usize,
+    par: bool,
+    factor: impl FnOnce(&[&[f64]]) -> Result<F, String>,
+) -> Result<Branch<P>, String> {
+    let lu = factor(z0)?;
+    // M^-1 v, as the factors' -M^-1 of -v (negation is exact)
+    let solve = |v: &[P::Scalar]| -> Result<Vec<P::Scalar>, String> {
+        lu.try_solve_neg(&v.iter().map(|&x| -x).collect::<Vec<_>>())
+    };
     let mut orders = pr.jet_orders(order)?;
     let mut last: Vec<Vec<f64>> = z0.iter().map(|p| p.to_vec()).collect();
     let mut br = Branch {
@@ -52,15 +70,13 @@ pub fn series<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized>(
     for _ in 1..=order {
         let f = orders.next(&parts(&last), par)?;
         let b: Vec<P::Scalar> = f.iter().map(|&v| -v).collect();
-        let mut x = b.clone();
-        P::lu_solve(&lu, &mut x);
+        let mut x = solve(&b)?;
         let resid = |x: &[P::Scalar]| -> Result<Vec<P::Scalar>, String> {
             let jx = pr.jvp(z0, &parts(&to_parts::<P>(x)), par)?;
             Ok(b.iter().zip(&jx).map(|(&bi, &ji)| bi - ji).collect())
         };
         for _ in 0..refine {
-            let mut r = resid(&x)?;
-            P::lu_solve(&lu, &mut r);
+            let r = solve(&resid(&x)?)?;
             x.iter_mut().zip(&r).for_each(|(xi, &ri)| *xi = *xi + ri);
         }
         let nb = max_abs::<P>(&b);

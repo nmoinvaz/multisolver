@@ -19,7 +19,7 @@ evaluations of growing length. The solvers need nothing else of the problem.
 
 | Module | What it does |
 |---|---|
-| `newton` | the Newton step, the damped Newton loop (Deuflhard's correction rule or a residual rule), the chord and Shamanskii methods that reuse a factorization, and an a-posteriori error estimate from the simplified corrections |
+| `newton` | the Newton step, the damped Newton loop (Deuflhard's correction rule or a residual rule), the chord and Shamanskii methods that reuse a factorization, the Newton matrix factored in double-double or f64 for a residual in quad- or octo-double, and an a-posteriori error estimate from the simplified corrections |
 | `gcr` | GMRES in its GCR form on exact Jacobian-vector products, with an adaptive Krylov direction where GMRES stagnates, and the Newton method whose solves it refines from an approximate factorization |
 | `lm` | the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular, handing over to Newton near the root |
 | `anm` | the asymptotic numerical method: the Taylor series of a solution branch in the problem's parameter, and its radius |
