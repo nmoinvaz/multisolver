@@ -14,7 +14,8 @@ A problem enters through the `Problem` trait: its residual and its exact Jacobia
 solver, the series of a branch and the exact tangent need. The series of a branch takes the residual's orders one at a
 time (`ResidualJet::jet_orders`): by default each is a fresh `residual_jet` of all the lower orders, and a problem that
 keeps its lower orders between calls overrides it, so that a series of order N costs N orders instead of N
-evaluations of growing length. The solvers need nothing else of the problem.
+evaluations of growing length. The `Family` trait gives the residual, the Jacobian and dF/dp at any parameter, which
+continuation through folds needs. The solvers need nothing else of the problem.
 [multishoot](https://github.com/nmoinvaz/multishoot)'s multiple-shooting layout is one such problem.
 
 | Module | What it does |
@@ -25,6 +26,7 @@ evaluations of growing length. The solvers need nothing else of the problem.
 | `lm` | the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular, handing over to Newton near the root |
 | `anm` | the asymptotic numerical method: the Taylor series of a solution branch in the problem's parameter, and its radius |
 | `predict` | continuation predictors: Lagrange extrapolation, the cubic Hermite, and the exact tangent |
+| `arclength` | pseudo-arclength continuation through folds: the bordered corrector, step control by the corrector's contraction, fold detection by the tangent's sign, and the fold's location |
 | `singularity` | the nearest singularities of a series from its coefficients: Pade poles that recur across the approximants' orders, the root test's radius, the ratio method of Domb and Sykes, and a recurrence for a conjugate pair |
 | `subspace` | the weakest singular directions of the Jacobian, Newton's method with them removed from its steps, the sensitivities of single unknowns, and the 1-norm condition estimate |
 | `winding` | the number of zeros of an analytic function inside a polygon by the argument principle, with adaptive sampling that catches close pairs and rows of zeros, their first moment, and Muller's method for one zero |
