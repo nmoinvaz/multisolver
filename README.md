@@ -41,6 +41,13 @@ cargo clippy --all-targets -- -D warnings
 The tests are planted-truth problems with a known answer. Each accuracy check has a control that feeds it a wrong
 result and must fail.
 
+## Related crates
+
+- [multidouble](https://github.com/nmoinvaz/multidouble) is the double-, quad- and octo-double arithmetic this crate
+  is written over, scalar and on 8-lane SIMD vectors with bitwise the same results on every backend.
+- [multishoot](https://github.com/nmoinvaz/multishoot) solves boundary-value problems by multiple shooting, and its
+  layout is a `Problem` that this crate's solvers take.
+
 ## License
 
 BSD 3-Clause, see [LICENSE](LICENSE).
