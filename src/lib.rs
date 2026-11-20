@@ -1,7 +1,7 @@
 //! Solvers of F(z) = 0 in double-, quad- and octo-double precision, written over a [`Problem`]: a problem gives its
 //! residual and its exact Jacobian in one of multidouble's precisions (`Precision`: [`Double`], [`Quad`], [`Octo`]),
 //! and the solvers here need nothing else of it. The multiple-shooting layout of the crate multishoot is one such
-//! problem.
+//! problem. Continuation in z and p together takes a [`Family`], the residual, the Jacobian and dF/dp at any p.
 //!
 //! * [`newton`]: the Newton step and the damped Newton loop, the chord and Shamanskii methods that reuse its
 //!   factors, and the Newton matrix factored in double-double or f64 for a residual in P;
@@ -11,6 +11,8 @@
 //! * [`lm`]: the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular;
 //! * [`anm`]: the asymptotic numerical method, the Taylor series of a solution branch in the problem's parameter;
 //! * [`predict`]: predictors for continuation: Lagrange extrapolation, the cubic Hermite, and the exact tangent;
+//! * [`arclength`]: pseudo-arclength continuation of a branch of a [`Family`] F(z, p) through its folds, and the
+//!   folds' location;
 //! * [`singularity`]: the nearest singularities of a series from its coefficients: Pade poles that recur across the
 //!   approximants' orders, the root test's radius, the ratio method and a recurrence for a conjugate pair;
 //! * [`subspace`]: the weakest singular directions of the Jacobian, Newton's method with them removed from its steps,
@@ -51,6 +53,7 @@
 //! assert!(report.converged && (x * x - DD::from_f64(2.0)).hi.abs() <= 1e-30);
 //! ```
 pub mod anm;
+pub mod arclength;
 pub mod gcr;
 pub mod lm;
 pub mod newton;
@@ -81,6 +84,25 @@ pub trait Problem<P: Precision<Native>> {
     /// The exact Jacobian dF/dz at z, as `P::lu_factor` takes it: part q of entry (i, j) at `c[q][j * ld + i]`, with
     /// the leading dimension ld a multiple of 8 and at least `len()` (`multidouble::linalg::ld_for`). Returns (c, ld).
     fn jacobian(&self, z: &[&[f64]], par: bool) -> Result<(Vec<Vec<f64>>, usize), String>;
+}
+
+/// A family of systems F(z, p) = 0 of `len()` equations in as many unknowns z and a scalar parameter p, evaluated at
+/// any p in the precision P: the residual, the Jacobian dF/dz and the derivative dF/dp, exact to P. Continuation in z
+/// and p together ([`arclength`]) needs F away from a fixed parameter, which [`ResidualJet`]'s series at p0 does not
+/// give. The state z is held as P::PARTS part arrays of f64, as a [`Problem`]'s.
+pub trait Family<P: Precision<Native>> {
+    /// the number of unknowns z, and of residual rows
+    fn len(&self) -> usize;
+    /// whether the family has no unknowns
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// F(z, p)
+    fn residual_at(&self, z: &[&[f64]], p: P::Scalar, par: bool) -> Result<Vec<P::Scalar>, String>;
+    /// dF/dz at (z, p), laid out as [`Problem::jacobian`] lays it out. Returns (c, ld).
+    fn jacobian_at(&self, z: &[&[f64]], p: P::Scalar, par: bool) -> Result<(Vec<Vec<f64>>, usize), String>;
+    /// dF/dp at (z, p), one scalar per row
+    fn dp_at(&self, z: &[&[f64]], p: P::Scalar, par: bool) -> Result<Vec<P::Scalar>, String>;
 }
 
 /// A problem whose Jacobian-vector product J v can be formed without the Jacobian, exact to the precision P
