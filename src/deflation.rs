@@ -11,6 +11,12 @@
 //! its Jacobian-vector product M (J v + F (w . v)) where the problem has one ([`crate::Jvp`], for
 //! [`crate::gcr::newton_refined`]); [`roots_from`] collects roots one search at a time.
 //!
+//! The rank-one term makes G's Jacobian dense where J is banded or block structured. [`Without::factors`] solves
+//! with it through factors of the problem's own J instead ([`WithoutFactors`]): with a = -J^-1 F, the problem's
+//! Newton step, and b = -J^-1 r, Sherman and Morrison give -(M (J + F w^T))^-1 r = (b + a (w . b) / (1 - w . a)) / M,
+//! at one residual of F and one more solve per factorization. Any factors of J serve, exact, lowered to double-double
+//! or f64 ([`crate::newton::Lowered`]), or structured, and keep their cost.
+//!
 //! Since the directions are Newton's for F, the damping decides whether a search leaves the first root's basin. The
 //! correction rule follows the continuous Newton path, along which G stays parallel to G(z_0) and which deflation does
 //! not move, so its searches often find no further root; full steps (the residual rule with `max_halvings` 0, the
@@ -22,7 +28,7 @@
 //! M, which then vanishes at infinity, falls below f64's range. Far from the known roots, where |z - r_i|^p or
 //! |z - r_i|^2 overflows, M and w stay finite.
 use crate::gcr::recip;
-use crate::newton::NewtonReport;
+use crate::newton::{Factored, NewtonReport};
 use crate::{Jvp, Problem};
 use multidouble::dd::DD;
 use multidouble::precision::Precision;
@@ -217,6 +223,72 @@ impl<P: Precision<Native>, Pr: Jvp<P> + ?Sized> Jvp<P> for Without<'_, P, Pr> {
         }
         let wv = P::dot(w.iter().copied().zip(scalars::<P>(v)));
         Ok(jv.iter().zip(&f).map(|(&a, &fi)| m * (a + fi * wv)).collect())
+    }
+}
+
+impl<P: Precision<Native>, Pr: Problem<P> + ?Sized> Without<'_, P, Pr> {
+    /// G's Newton matrix M (J + F w^T) at z, solved through `lu`, factors of the problem's J at z (such as
+    /// `exact(pr, z, par)`, or lowered or structured ones): [`WithoutFactors`]. With no roots its solves are `lu`'s,
+    /// bit for bit. An error where M is not finite (at a known root, as for [`Without::jacobian`]), or where
+    /// 1 - w . a is zero or not finite, where the deflated matrix is singular.
+    pub fn factors<F: Factored<P>>(&self, z: &[&[f64]], lu: F, par: bool) -> Result<WithoutFactors<P, F>, String> {
+        if self.roots.is_empty() {
+            return Ok(WithoutFactors { lu, rank_one: None });
+        }
+        let Some((m, w)) = self.operator(z) else {
+            return Err("Without: no factors at a known root, where M is not finite".into());
+        };
+        let f = self.pr.residual(z, par)?;
+        let a = lu.try_solve_neg(&f)?;
+        if a.len() != w.len() {
+            return Err(format!("Without: a solve of {} rows, not {}", a.len(), w.len()));
+        }
+        let c = recip::<P>(P::ONE - P::dot(w.iter().copied().zip(a.iter().copied())));
+        let im = recip::<P>(m);
+        if !(finite::<P>(c) && finite::<P>(im)) {
+            return Err("Without: the deflated Newton matrix is singular here (1 - w . a is zero)".into());
+        }
+        Ok(WithoutFactors {
+            lu,
+            rank_one: Some(RankOne { a, w, c, im }),
+        })
+    }
+}
+
+/// a = -J^-1 F, w, c = 1 / (1 - w . a) and 1 / M of [`WithoutFactors`]
+struct RankOne<P: Precision<Native>> {
+    a: Vec<P::Scalar>,
+    w: Vec<P::Scalar>,
+    c: P::Scalar,
+    im: P::Scalar,
+}
+
+/// G's Newton matrix M (J + F w^T) at a point through factors of the problem's J there ([`Without::factors`]): each
+/// solve is one solve with them and O(n) operations in P
+pub struct WithoutFactors<P: Precision<Native>, F> {
+    lu: F,
+    rank_one: Option<RankOne<P>>,
+}
+
+impl<P: Precision<Native>, F> WithoutFactors<P, F> {
+    /// -(M (J + F w^T))^-1 r from b = -J^-1 r: u + a (w . u) c with u = b / M
+    fn finish(&self, b: Vec<P::Scalar>) -> Vec<P::Scalar> {
+        let Some(k) = &self.rank_one else {
+            return b;
+        };
+        // b / M first: with M large, w . b and a (w . b) can overflow where the step is finite
+        let u: Vec<P::Scalar> = b.iter().map(|&bi| bi * k.im).collect();
+        let s = P::dot(k.w.iter().copied().zip(u.iter().copied())) * k.c;
+        u.iter().zip(&k.a).map(|(&ui, &ai)| ui + ai * s).collect()
+    }
+}
+
+impl<P: Precision<Native>, F: Factored<P>> Factored<P> for WithoutFactors<P, F> {
+    fn solve_neg(&self, r: &[P::Scalar]) -> Vec<P::Scalar> {
+        self.finish(self.lu.solve_neg(r))
+    }
+    fn try_solve_neg(&self, r: &[P::Scalar]) -> Result<Vec<P::Scalar>, String> {
+        Ok(self.finish(self.lu.try_solve_neg(r)?))
     }
 }
 

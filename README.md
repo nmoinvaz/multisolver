@@ -31,7 +31,7 @@ series of order N costs N orders rather than N evaluations of growing length.
 | `anm` | the asymptotic numerical method: the Taylor series of a solution branch in the problem's parameter, and its radius |
 | `predict` | continuation predictors: Lagrange extrapolation, the cubic Hermite, and the exact tangent |
 | `arclength` | pseudo-arclength continuation through folds: the bordered corrector, step control by the corrector's contraction, fold detection by the tangent's sign, and the fold's location |
-| `deflation` | further roots from the same start: the problem with its known roots deflated (Farrell, Birkisson and Funke), its residual and Jacobian exact so that any solver runs on it, and the roots collected one search at a time |
+| `deflation` | further roots from the same start: the problem with its known roots deflated (Farrell, Birkisson and Funke), its residual and Jacobian exact so that any solver runs on it, its Newton matrix also solved through the problem's own factors (Sherman-Morrison) so that structured or lowered factors keep serving, and the roots collected one search at a time |
 | `singularity` | the nearest singularities of a series from its coefficients: Pade poles that recur across the approximants' orders, the root test's radius, the ratio method of Domb and Sykes, and a recurrence for a conjugate pair |
 | `subspace` | the weakest singular directions of the Jacobian, Newton's method with them removed from its steps, the sensitivities of single unknowns, and the 1-norm condition estimate |
 | `winding` | the number of zeros of an analytic function inside a polygon by the argument principle, with adaptive sampling that catches close pairs and rows of zeros, their first moment, and Muller's method for one zero |
