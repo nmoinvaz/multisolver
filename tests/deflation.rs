@@ -5,7 +5,7 @@
 use multisolver::deflation::{roots_from, DeflationOpts, Found, Without};
 use multisolver::gcr::{newton_refined, GcrOpts};
 use multisolver::multidouble::linalg::ld_for;
-use multisolver::newton::{exact, newton, newton_lowered, Damping, Lower, NewtonOpts};
+use multisolver::newton::{exact, lowered, newton, newton_lowered, newton_with, Damping, Factored, Lower, NewtonOpts};
 use multisolver::prec::{max_abs, nan_max, parts};
 use multisolver::{Double, Jvp, Native, Octo, Precision, Problem, Quad, DD};
 
@@ -521,4 +521,174 @@ fn deflated_residual_is_infinite_at_a_known_root() {
     println!("Newton from the root: converged {}, |G| {:?}", rep.converged, rep.fnorm);
     assert!(!rep.converged);
     assert!(!all_inf(&z0::<Double>()), "control did not fire");
+}
+
+/// The solve of G's Newton matrix through the problem's exact factors (`Without::factors`, roots 0 and 1 of ROOTS
+/// deflated, at a point away from them) against the exact LU of G's dense Jacobian, for r = G there: max over the rows
+/// of the difference, relative to max |x|. `rank_one` false solves with M J alone, -J^-1 r / M.
+fn factors_error<P: Precision<Native>>(rank_one: bool) -> f64 {
+    let at = [0.3, 1.1, 0.2, -0.4].map(s::<P>);
+    let roots: Vec<Vec<Vec<f64>>> = (0..2).map(root::<P>).collect();
+    let pr = Four::<P>::new();
+    let g = Without::new(&pr, &roots, DeflationOpts::default()).unwrap();
+    let z = to_parts::<P>(&at);
+    let r = g.residual(&parts(&z), false).unwrap();
+    let dense = exact::<P, _>(&g, &parts(&z), false).unwrap().solve_neg(&r);
+    let x = if rank_one {
+        let lu = exact::<P, _>(&pr, &parts(&z), false).unwrap();
+        g.factors(&parts(&z), lu, false).unwrap().solve_neg(&r)
+    } else {
+        let (m, _) = g.operator(&parts(&z)).unwrap();
+        let im = P::from_dd(DD::ONE / P::to_dd(m));
+        let b = exact::<P, _>(&pr, &parts(&z), false).unwrap().solve_neg(&r);
+        b.iter().map(|&v| v * im).collect()
+    };
+    let worst = x
+        .iter()
+        .zip(&dense)
+        .map(|(&a, &b)| P::to_dd(a - b).hi.abs())
+        .fold(0.0, nan_max);
+    worst / max_abs::<P>(&dense)
+}
+
+/// Pass, written before the first run: through the problem's exact factors, `Without::factors` solves G's Newton
+/// matrix M (J + F w^T) as the exact LU of G's dense Jacobian does, to 1e-30 relative in double-double and 1e-62 in
+/// quad-double; with no roots deflated its solves are the factors' own, bit for bit. The controls: M J alone, without
+/// the rank-one term, misses by more than 1e-30; and with a root deflated the solves differ from the factors' own.
+#[test]
+fn deflated_factors_solve_the_deflated_matrix() {
+    let e2 = factors_error::<Double>(true);
+    let e4 = factors_error::<Quad>(true);
+    let ec = factors_error::<Double>(false);
+    println!("double-double {e2:.3e}, quad-double {e4:.3e}, control without the rank-one term {ec:.3e}");
+    assert!(e2 <= 1e-30 && e4 <= 1e-62);
+    assert!(ec > 1e-30, "control did not fire");
+
+    let pr = Four::<Double>::new();
+    let z = to_parts::<Double>(&[0.3, 1.1, 0.2, -0.4].map(DD::from_f64));
+    let r = pr.residual(&parts(&z), false).unwrap();
+    let bits = |v: Vec<DD>| {
+        v.iter()
+            .flat_map(|x| [x.hi.to_bits(), x.lo.to_bits()])
+            .collect::<Vec<_>>()
+    };
+    let own = bits(exact::<Double, _>(&pr, &parts(&z), false).unwrap().solve_neg(&r));
+    let via = |roots: &[Vec<Vec<f64>>]| {
+        let g = Without::new(&pr, roots, DeflationOpts::default()).unwrap();
+        let lu = exact::<Double, _>(&pr, &parts(&z), false).unwrap();
+        bits(g.factors(&parts(&z), lu, false).unwrap().solve_neg(&r))
+    };
+    assert_eq!(via(&[]), own, "no roots: not the factors' own solves");
+    assert_ne!(via(&[root::<Double>(0)]), own, "control, a root deflated");
+}
+
+/// F(x) = 2^-100 x, one unknown, whose root is 0
+struct Tiny;
+
+impl<P: Precision<Native>> Problem<P> for Tiny {
+    fn len(&self) -> usize {
+        1
+    }
+    fn residual(&self, z: &[&[f64]], _par: bool) -> Result<Vec<P::Scalar>, String> {
+        Ok(vec![scalars::<P>(z)[0] * s::<P>(2f64.powi(-100))])
+    }
+    fn jacobian(&self, _z: &[&[f64]], _par: bool) -> Result<(Vec<Vec<f64>>, usize), String> {
+        let ld = ld_for(1);
+        let mut c = vec![vec![0.0; ld]; P::PARTS];
+        for (q, cq) in c.iter_mut().enumerate() {
+            cq[0] = P::part(s::<P>(2f64.powi(-100)), q);
+        }
+        Ok((c, ld))
+    }
+}
+
+/// Pass, written before the first run: on Tiny with the root 0 deflated by power 34 and shift 1, at x = 2^-30, where
+/// M is about 2^1020 and the solve b = -J^-1 G is about -2^990, so that w . b, about 34 2^1020, is past f64's range,
+/// the solve through the problem's factors is finite and agrees with the exact LU of G's dense Jacobian (about
+/// -33 2^920) to 1e-30 relative: x = 2^-30 / 33. The control: the same solve with w . b formed before the division by
+/// M, (b + a (w . b) c) / M from the operator's M and w and the problem's own solves, is not finite there.
+#[test]
+fn deflated_factors_do_not_overflow_where_m_is_large() {
+    let z = to_parts::<Double>(&[DD::from_f64(2f64.powi(-30))]);
+    let root = to_parts::<Double>(&[DD::ZERO]);
+    let g = Without::new(
+        &Tiny,
+        std::slice::from_ref(&root),
+        DeflationOpts { power: 34, shift: 1.0 },
+    )
+    .unwrap();
+    let r = g.residual(&parts(&z), false).unwrap();
+    let dense = exact::<Double, _>(&g, &parts(&z), false).unwrap().solve_neg(&r);
+    let lu = exact::<Double, _>(&Tiny, &parts(&z), false).unwrap();
+    let x = g.factors(&parts(&z), lu, false).unwrap().solve_neg(&r);
+    let rel = |v: &[DD]| (v[0] - dense[0]).hi.abs() / dense[0].hi.abs();
+    let (m, w) = g.operator(&parts(&z)).unwrap();
+    let own = exact::<Double, _>(&Tiny, &parts(&z), false).unwrap();
+    let a = own.solve_neg(&Problem::<Double>::residual(&Tiny, &parts(&z), false).unwrap());
+    let b = own.solve_neg(&r);
+    let c = DD::ONE / (DD::ONE - w[0] * a[0]);
+    let late = [(b[0] + a[0] * (w[0] * b[0]) * c) / m];
+    println!(
+        "M {:.3e}, dense {:.6e} (2^-30 / 33 = {:.6e}), factors {:.3e} relative, control {:?}",
+        m.hi,
+        dense[0].hi,
+        2f64.powi(-30) / 33.0,
+        rel(&x),
+        late[0].hi
+    );
+    assert!(x[0].hi.is_finite() && rel(&x) <= 1e-30);
+    assert!(!late[0].hi.is_finite(), "control did not fire");
+}
+
+/// roots_from on Unity from u0, 5 searches by full Newton steps on G's Newton matrix through the problem's own
+/// factors (`Without::factors`): exact, or in f64 (`Lower::F64`) when `f64_factors`
+fn search_via_factors<P: Precision<Native>>(tol: f64, f64_factors: bool) -> (Unity<P>, Found) {
+    let pr = Unity { four: Four::<P>::new() };
+    let o = full_steps(tol);
+    let found = roots_from::<P, _>(&pr, &u0::<P>(), 5, &DeflationOpts::default(), |g, z| {
+        if f64_factors {
+            newton_with::<P, _, _>(g, z, &o, |z| {
+                g.factors(z, lowered::<P, _>(&pr, z, Lower::F64, false)?, false)
+            })
+        } else {
+            newton_with::<P, _, _>(g, z, &o, |z| g.factors(z, exact::<P, _>(&pr, z, false)?, false))
+        }
+    })
+    .unwrap();
+    (pr, found)
+}
+
+/// Pass, written before the first run: as `deflation_finds_every_root_from_one_start`, but with G's Newton matrix
+/// solved through the problem's own factors: from (0.45, 0.6, 0.1, -0.2), full Newton steps find the four roots of
+/// Unity and a fifth search ends without a root, in double-double with exact factors (each root within 1e-29 of a
+/// planted one, max |F| <= 1e-30) and in quad-double with f64 factors (within 1e-61, max |F| <= 1e-62). The control:
+/// a found root moved by 1e-20 fails the check of accuracy.
+#[test]
+fn deflation_through_the_problems_factors_finds_every_root() {
+    let (pr, found) = search_via_factors::<Double>(1e-30, false);
+    println!(
+        "double-double, exact factors: {} roots, steps {:?}, ended: {:?}",
+        found.roots.len(),
+        found.reports.iter().map(|r| r.scale.len()).collect::<Vec<_>>(),
+        found.ended
+    );
+    assert_eq!(checks::<Double>(&pr, &UNITY, &found.roots, 1e-29, 1e-30), [true; 3]);
+    assert!(found.ended.is_some(), "a fifth root");
+    let (prq, fq) = search_via_factors::<Quad>(1e-62, true);
+    println!(
+        "quad-double, f64 factors: {} roots, steps {:?}, ended: {:?}",
+        fq.roots.len(),
+        fq.reports.iter().map(|r| r.scale.len()).collect::<Vec<_>>(),
+        fq.ended
+    );
+    assert_eq!(checks::<Quad>(&prq, &UNITY, &fq.roots, 1e-61, 1e-62), [true; 3]);
+    assert!(fq.ended.is_some(), "a fifth root in quad-double");
+
+    let mut moved = found.roots.clone();
+    let z = DD::new(moved[2][0][1], moved[2][1][1]) + DD::from_f64(1e-20);
+    (moved[2][0][1], moved[2][1][1]) = (z.hi, z.lo);
+    assert!(
+        !checks::<Double>(&pr, &UNITY, &moved, 1e-29, 1e-30)[2],
+        "control did not fire"
+    );
 }
