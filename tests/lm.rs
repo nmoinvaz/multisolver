@@ -2,11 +2,11 @@
 //! and Newton's method cannot step, and its handover to Newton. The crate multishoot tests it on a planted
 //! multiple-shooting problem.
 
-use multisolver::lm::{gram, levenberg_marquardt, LmOpts};
+use multisolver::lm::{gram, levenberg_marquardt, levenberg_marquardt_with, LmOpts};
 use multisolver::multidouble::linalg::ld_for;
-use multisolver::newton::{newton, NewtonOpts};
+use multisolver::newton::{lowered, newton, Lower, NewtonOpts};
 use multisolver::prec::{max_abs, nan_max, parts};
-use multisolver::{Double, Native, Precision, Problem, Quad, DD};
+use multisolver::{Double, Native, Octo, Precision, Problem, Quad, DD};
 
 /// a J of n x n with entries sin(3 i + 7 j) + i j / n^2 in double-double (nonzero lo parts), as `Problem::jacobian`
 /// lays it out, rows n..ld filled with 1e300 (which `gram` must ignore), and b_i = cos(i)
@@ -332,4 +332,44 @@ fn lm_returns_the_problems_error() {
     let r = run(2.0);
     println!("control, residual valid up to 2: {r:?}");
     assert!(!check(&r), "control did not fire");
+}
+
+/// Pass, written before the first run: with its handover's Newton matrix the Jacobian rounded to double-double
+/// (`Lowered`), LM from the singular start reaches the root of Circle to 1e-60 in quad-double and 1e-120 in
+/// octo-double within 50 LM steps, the handover's Newton run converged, and passes the three checks of
+/// `circle_checks`. The control: its root with z0 off by 1e-50 (1e-110 in octo-double) fails all three.
+#[test]
+fn lm_hands_over_to_newton_with_lowered_factors() {
+    fn case<P: Precision<Native>>(name: &str, tol: f64, eps: f64) {
+        let mut z = singular_start::<P>();
+        let opts = LmOpts {
+            tol,
+            ..Default::default()
+        };
+        let rep = levenberg_marquardt_with::<P, _, _>(&Circle, &mut z, &opts, |z| {
+            lowered::<P, _>(&Circle, z, Lower::Double, false)
+        })
+        .unwrap();
+        let handed = rep.newton.as_ref().is_some_and(|r| r.converged);
+        let (f, d, r) = circle_errors::<P>(&z);
+        println!(
+            "{name}: converged {} after {} LM steps, Newton converged {handed}, max |F| {f:.3e}, |z0 - z1| {d:.3e}, \
+             |2 z0^2 - 1| {r:.3e}",
+            rep.converged,
+            rep.mu.len()
+        );
+        assert!(
+            rep.converged && handed && circle_checks((f, d, r), tol) == [true; 3],
+            "{name}"
+        );
+        let mut zw = z.clone();
+        let a = sc::<P>(&parts(&z), 0) + P::from_dd(DD::from_f64(eps));
+        for (q, p) in zw.iter_mut().enumerate() {
+            p[0] = P::part(a, q);
+        }
+        let e = circle_errors::<P>(&zw);
+        assert_eq!(circle_checks(e, tol), [false; 3], "{name}: control did not fire");
+    }
+    case::<Quad>("quad-double", 1e-60, 1e-50);
+    case::<Octo>("octo-double", 1e-120, 1e-110);
 }

@@ -3,8 +3,8 @@
 //! and the solvers here need nothing else of it. The multiple-shooting layout of the crate multishoot is one such
 //! problem.
 //!
-//! * [`newton`]: the Newton step and the damped Newton loop, and the chord and Shamanskii methods that reuse its
-//!   factors;
+//! * [`newton`]: the Newton step and the damped Newton loop, the chord and Shamanskii methods that reuse its
+//!   factors, and the Newton matrix factored in double-double or f64 for a residual in P;
 //! * [`gcr`]: a preconditioned Krylov solver (GMRES in its GCR form) on exact Jacobian-vector products, and the Newton
 //!   method whose steps it refines from an approximate factorization;
 //! * [`lm`]: the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular;

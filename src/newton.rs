@@ -8,9 +8,14 @@
 //! corrected from the trial's. No scaling of the residual's rows changes these tests, so a problem whose rows differ by
 //! orders of magnitude takes the steps of its unscaled copy. The residual rule, halving while max |F| does not fall,
 //! is kept for comparison.
+//!
+//! The Newton matrix need not be factored in P: with the residual in P, factors of the Jacobian rounded to
+//! double-double or f64 ([`Lowered`], [`newton_lowered`]) converge to P's accuracy linearly, at a contraction of
+//! about cond(J) 2^-104 or 2^-53 per step (iterative refinement; Moler, J. ACM 14 (1967) 316).
 use crate::prec::{max_abs, parts};
 use crate::Problem;
 use multidouble::dd::DD;
+use multidouble::linalg::DDLu;
 use multidouble::precision::Precision;
 use multidouble::simd::Native;
 use std::cell::RefCell;
@@ -176,6 +181,63 @@ pub fn exact<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
     Ok(Exact(P::lu_factor(pr.len(), ld, c, par)?))
 }
 
+/// The rounding of a Jacobian that [`Lowered`] factors
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Lower {
+    /// to double-double, its first two parts (the parts of a quad- or octo-double do not overlap): the factors of
+    /// `DDLu::factor`, which leave Newton's error contracting by about cond(J) 2^-104 per step
+    Double,
+    /// to f64, its first part: the f64 LU of `DDLu::factor_f64`, which leaves a contraction of about cond(J) 2^-53
+    F64,
+}
+
+/// A Newton matrix factored in double-double or in f64 for a residual in P: each solve -M^-1 r rounds r to
+/// double-double, solves in double-double with the factors, and takes the result into P exactly. Since the
+/// residual is P's, Newton's method converges to P's accuracy, linearly by the contraction of [`Lower`], at the cost
+/// of a factorization in double-double or f64: at n = 256 a double-double LU costs about 1/20 of a quad-double one
+/// and 1/120 of an octo-double one, an f64 LU about a sixth of a double-double one. With
+/// [`crate::gcr::newton_refined`] it preconditions the exact steps. For P = `Double` and
+/// `Lower::Double` the factors are `P::lu_factor`'s and the solves [`Exact`]'s, bit for bit.
+pub struct Lowered(pub DDLu);
+
+impl Lowered {
+    /// The Jacobian given as `Problem::jacobian` returns it (part q of entry (i, j) at `c[q][j * ld + i]`, any number
+    /// of parts), rounded by `to` and factored
+    pub fn factor(n: usize, ld: usize, mut c: Vec<Vec<f64>>, to: Lower, par: bool) -> Result<Lowered, String> {
+        if c.is_empty() {
+            return Err("Lowered::factor: a Jacobian without parts".into());
+        }
+        let hi = std::mem::take(&mut c[0]);
+        let lu = match to {
+            Lower::Double => {
+                let lo = c.get_mut(1).map_or_else(|| vec![0.0; hi.len()], std::mem::take);
+                DDLu::factor(n, ld, hi, lo, par)?
+            }
+            Lower::F64 => DDLu::factor_f64(n, ld, hi, par)?,
+        };
+        Ok(Lowered(lu))
+    }
+}
+
+impl<P: Precision<Native>> Factored<P> for Lowered {
+    fn solve_neg(&self, r: &[P::Scalar]) -> Vec<P::Scalar> {
+        let mut b: Vec<DD> = r.iter().map(|&v| -P::to_dd(v)).collect();
+        self.0.solve(&mut b);
+        b.into_iter().map(P::from_dd).collect()
+    }
+}
+
+/// The exact Jacobian of `pr` at z, rounded by `to` and factored ([`Lowered`])
+pub fn lowered<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
+    pr: &Pr,
+    z: &[&[f64]],
+    to: Lower,
+    par: bool,
+) -> Result<Lowered, String> {
+    let (c, ld) = pr.jacobian(z, par)?;
+    Lowered::factor(pr.len(), ld, c, to, par)
+}
+
 /// A factorization reused for `every` steps: the returned closure calls `factor` at the first step and again every
 /// `every` steps, and hands out the last factors in between. The loops of [`newton_with`] call it once per step, so
 /// with it they run Shamanskii's method, the chord method for `every` at least the step count (Kelley, Iterative
@@ -253,6 +315,18 @@ pub fn newton_chord<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
         return Err("newton_chord: every must be at least 1".into());
     }
     newton_with::<P, Pr, _>(pr, z, opts, reuse(every, |z| exact::<P, Pr>(pr, z, opts.par)))
+}
+
+/// Newton's method, damped as `newton`, with the exact Jacobian rounded by `to` and factored in double-double or f64
+/// at each step ([`Lowered`]): for P = `Quad` or `Octo` it converges to P's accuracy in about as many steps, each at a
+/// fraction of the cost.
+pub fn newton_lowered<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
+    pr: &Pr,
+    z: &mut Vec<Vec<f64>>,
+    opts: &NewtonOpts,
+    to: Lower,
+) -> Result<NewtonReport, String> {
+    newton_with::<P, Pr, _>(pr, z, opts, |z| lowered::<P, Pr>(pr, z, to, opts.par))
 }
 
 /// The damped loop of `newton` with the Newton matrix that `factor` forms and factors at each step's z: the exact

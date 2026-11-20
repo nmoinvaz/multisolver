@@ -1,8 +1,9 @@
 //! The asymptotic numerical method on a planted branch: a cyclic system whose root is a quadratic polynomial in the
 //! parameter. The crate multishoot tests it on a multiple-shooting eigenproblem.
 
-use multisolver::anm::{series, Branch};
+use multisolver::anm::{series, series_with, Branch};
 use multisolver::multidouble::linalg::ld_for;
+use multisolver::newton::{lowered, Lower};
 use multisolver::prec::{nan_max, parts};
 use multisolver::{Double, JetOrders, Jvp, Native, Precision, Problem, Quad, Recompute, ResidualJet, DD};
 
@@ -338,4 +339,42 @@ fn anm_takes_the_orders_from_jet_orders() {
     }
     run::<Double>("double-double");
     run::<Quad>("quad-double");
+}
+
+/// The series of order 8 at the root of the polynomial branch in quad-double, the Jacobian there rounded by `to` and
+/// factored, each order's solve refined `refine` times
+fn poly_branch_lowered(to: Lower, refine: usize) -> Branch<Quad> {
+    let pr = Poly::<Quad>::new(false);
+    let z0 = pr.root();
+    series_with::<Quad, _, _>(&pr, &parts(&z0), 8, refine, false, |z| {
+        lowered::<Quad, _>(&pr, z, to, false)
+    })
+    .unwrap()
+}
+
+/// Pass, written before the first run: in quad-double, with the Jacobian at the root rounded to double-double and
+/// each order's solve refined twice by the exact products (each refinement contracting its error by about
+/// cond(J) 2^-104), or rounded to f64 and refined six times (about cond(J) 2^-53 each), the series passes the
+/// quad-double checks of `anm_reproduces_a_polynomial_branch`: z_1, z_2 and z(0.3) to 1e-60, the higher orders below
+/// 1e-59. The control: rounded to double-double and not refined, the solves keep the factors' error of about 1e-31
+/// and fail all four checks.
+#[test]
+fn anm_with_lowered_factors_reaches_the_precision() {
+    for (name, to, refine, want) in [
+        ("double-double factors, refined twice", Lower::Double, 2, [true; 4]),
+        ("f64 factors, refined six times", Lower::F64, 6, [true; 4]),
+        (
+            "control, double-double factors, not refined",
+            Lower::Double,
+            0,
+            [false; 4],
+        ),
+    ] {
+        let e = poly_errors(&poly_branch_lowered(to, refine));
+        println!(
+            "{name}: z_1 {:.3e}, z_2 {:.3e}, z_3..z_8 {:.3e}, z(0.3) {:.3e}",
+            e[0], e[1], e[2], e[3]
+        );
+        assert_eq!(poly_checks(e, 1e-60, 1e-59), want, "{name}");
+    }
 }

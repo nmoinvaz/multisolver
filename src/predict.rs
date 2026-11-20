@@ -5,8 +5,9 @@
 //!
 //! The weights are formed in the precision P from the parameters' exact differences (two f64 values differ by a
 //! double-double exactly), so a polynomial branch of degree below the number of points is reproduced to P's rounding.
-use crate::anm::series;
+use crate::anm::series_with;
 use crate::gcr::recip;
+use crate::newton::{exact, Factored};
 use crate::{Jvp, ResidualJet};
 use multidouble::dd::DD;
 use multidouble::precision::Precision;
@@ -76,15 +77,27 @@ pub fn hermite<P: Precision<Native>>(
     combine::<P>(&w, &[z0, t0, z1, t1])
 }
 
-/// dz/dp at the solution z (part arrays of P): -J^-1 dF/dp, order 1 of the branch's series ([`series`]), its solve
-/// refined `refine` times by the exact products J x
+/// dz/dp at the solution z (part arrays of P): -J^-1 dF/dp, order 1 of the branch's series
+/// ([`crate::anm::series`]), its solve refined `refine` times by the exact products J x
 pub fn tangent<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized>(
     pr: &Pr,
     z: &[&[f64]],
     refine: usize,
     par: bool,
 ) -> Result<Vec<Vec<f64>>, String> {
-    let br = series::<P, Pr>(pr, z, 1, refine, par)?;
+    tangent_with::<P, Pr, _>(pr, z, refine, par, |z| exact::<P, Pr>(pr, z, par))
+}
+
+/// `tangent` with the Jacobian at z factored by `factor` ([`crate::anm::series_with`]), such as in double-double or
+/// f64
+pub fn tangent_with<P: Precision<Native>, Pr: ResidualJet<P> + Jvp<P> + ?Sized, F: Factored<P>>(
+    pr: &Pr,
+    z: &[&[f64]],
+    refine: usize,
+    par: bool,
+    factor: impl FnOnce(&[&[f64]]) -> Result<F, String>,
+) -> Result<Vec<Vec<f64>>, String> {
+    let br = series_with::<P, Pr, F>(pr, z, 1, refine, par, factor)?;
     Ok((0..P::PARTS)
         .map(|q| br.z[1].iter().map(|&v| P::part(v, q)).collect())
         .collect())
