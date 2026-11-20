@@ -13,6 +13,7 @@
 //! * [`predict`]: predictors for continuation: Lagrange extrapolation, the cubic Hermite, and the exact tangent;
 //! * [`arclength`]: pseudo-arclength continuation of a branch of a [`Family`] F(z, p) through its folds, and the
 //!   folds' location;
+//! * [`deflation`]: further roots from the same start, with the known ones deflated (Farrell, Birkisson and Funke);
 //! * [`singularity`]: the nearest singularities of a series from its coefficients: Pade poles that recur across the
 //!   approximants' orders, the root test's radius, the ratio method and a recurrence for a conjugate pair;
 //! * [`subspace`]: the weakest singular directions of the Jacobian, Newton's method with them removed from its steps,
@@ -54,6 +55,7 @@
 //! ```
 pub mod anm;
 pub mod arclength;
+pub mod deflation;
 pub mod gcr;
 pub mod lm;
 pub mod newton;
