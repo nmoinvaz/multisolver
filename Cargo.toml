@@ -20,5 +20,10 @@ rayon = "1.10"
 # the plain-array SIMD backend of multidouble on every target
 portable = ["multidouble/portable"]
 
+[[example]]
+name = "graphs"
+# its controls of the planted-truth checks run with the tests
+test = true
+
 [profile.release]
 opt-level = 3
