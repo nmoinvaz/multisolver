@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="458" viewBox="0 0 720 458" font-family="system-ui, sans-serif">
+<style>@media (prefers-color-scheme: dark){[fill="#fcfcfb"]{fill:#201f1d}[stroke="#fcfcfb"]{stroke:#201f1d}[fill="#0b0b0b"]{fill:#e8e6e3}[stroke="#0b0b0b"]{stroke:#e8e6e3}[fill="#52514e"]{fill:#a8a49d}[stroke="#52514e"]{stroke:#a8a49d}[fill="#e7e6e2"]{fill:#343230}[stroke="#e7e6e2"]{stroke:#343230}[fill="#c98500"]{fill:#d69a2d}[stroke="#c98500"]{stroke:#d69a2d}[fill="#eb6834"]{fill:#dd5c26}[stroke="#eb6834"]{stroke:#dd5c26}[fill="#eda100"]{fill:#c08800}[stroke="#eda100"]{stroke:#c08800}[fill="#e87ba4"]{fill:#d1678f}[stroke="#e87ba4"]{stroke:#d1678f}[fill="#4a3aa7"]{fill:#7263cf}[stroke="#4a3aa7"]{stroke:#7263cf}[fill="#a6339a"]{fill:#c257b5}[stroke="#a6339a"]{stroke:#c257b5}[fill="#7a7668"]{fill:#948e82}[stroke="#7a7668"]{stroke:#948e82}}</style>
+<rect width="720" height="458" fill="#fcfcfb"/>
+<text x="16.0" y="22.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="normal">Newton's method in three precisions</text>
+<text x="16.0" y="38.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">one planted system of n = 32, from z* + 3/4 (1, -1, ...), no tolerance: the same steps until each precision's floor</text>
+<line x1="102.1" y1="84.0" x2="102.1" y2="384.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="102.1" y="399.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">0</text>
+<line x1="327.9" y1="84.0" x2="327.9" y2="384.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="327.9" y="399.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">5</text>
+<line x1="553.7" y1="84.0" x2="553.7" y2="384.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="553.7" y="399.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">10</text>
+<line x1="84.0" y1="384.0" x2="644.0" y2="384.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="78.0" y="388.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1e-150</text>
+<line x1="84.0" y1="290.2" x2="644.0" y2="290.2" stroke="#e7e6e2" stroke-width="1"/>
+<text x="78.0" y="294.2" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1e-100</text>
+<line x1="84.0" y1="196.5" x2="644.0" y2="196.5" stroke="#e7e6e2" stroke-width="1"/>
+<text x="78.0" y="200.5" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1e-50</text>
+<line x1="84.0" y1="102.8" x2="644.0" y2="102.8" stroke="#e7e6e2" stroke-width="1"/>
+<text x="78.0" y="106.8" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1</text>
+<line x1="84.0" y1="384.0" x2="644.0" y2="384.0" stroke="#52514e" stroke-width="1"/>
+<line x1="84.0" y1="84.0" x2="84.0" y2="384.0" stroke="#52514e" stroke-width="1"/>
+<text x="364.0" y="418.0" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="normal">Newton step</text>
+<text x="27.7" y="234.0" font-size="12" fill="#0b0b0b" text-anchor="middle" transform="rotate(-90 27.7 234.0)">max |F| (lower is better)</text>
+<g opacity="0.35"><line x1="662.0" y1="114.0" x2="662.0" y2="170.0" stroke="#52514e" stroke-width="2"/><polygon points="662.0,176.0 658.0,167.0 666.0,167.0" fill="#52514e"/><text x="662.0" y="138.0" font-size="11" fill="#52514e" text-anchor="middle" transform="rotate(90.0 662.0 145.0)">better</text></g>
+<polyline points="102.1,101.5 147.2,102.8 192.4,105.0 237.5,109.4 282.7,118.1 327.9,135.7 373.0,161.0 418.2,161.5 463.4,161.5" fill="none" stroke="#2a78d6" stroke-width="2"/>
+<polyline points="102.1,101.5 147.2,102.8 192.4,105.0 237.5,109.4 282.7,118.1 327.9,135.7 373.0,170.9 418.2,220.5 463.4,221.9 508.5,222.4 553.7,222.8 598.8,223.0 644.0,223.0" fill="none" stroke="#eb6834" stroke-width="2"/>
+<polyline points="102.1,101.5 147.2,102.8 192.4,105.0 237.5,109.4 282.7,118.1 327.9,135.7 373.0,170.9 418.2,241.4 463.4,346.1 508.5,346.6 553.7,348.8 598.8,348.8 644.0,348.8" fill="none" stroke="#1baf7a" stroke-width="2"/>
+<g><circle cx="97.1" cy="101.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 0: max |F| = 4.712e+00</title></g>
+<g><circle cx="142.2" cy="102.8" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 1: max |F| = 9.849e-01</title></g>
+<g><circle cx="187.4" cy="105.0" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 2: max |F| = 6.291e-02</title></g>
+<g><circle cx="232.5" cy="109.4" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 3: max |F| = 2.945e-04</title></g>
+<g><circle cx="277.7" cy="118.1" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 4: max |F| = 6.330e-09</title></g>
+<g><circle cx="322.9" cy="135.7" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 5: max |F| = 2.642e-18</title></g>
+<g><circle cx="373.0" cy="161.0" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 6: max |F| = 8.628e-32</title></g>
+<g><circle cx="418.2" cy="161.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 7: max |F| = 4.930e-32</title></g>
+<g><circle cx="463.4" cy="161.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>double-double, step 8: max |F| = 4.930e-32</title></g>
+<g><circle cx="102.1" cy="101.5" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 0: max |F| = 4.712e+00</title></g>
+<g><circle cx="147.2" cy="102.8" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 1: max |F| = 9.849e-01</title></g>
+<g><circle cx="192.4" cy="105.0" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 2: max |F| = 6.291e-02</title></g>
+<g><circle cx="237.5" cy="109.4" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 3: max |F| = 2.945e-04</title></g>
+<g><circle cx="282.7" cy="118.1" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 4: max |F| = 6.330e-09</title></g>
+<g><circle cx="327.9" cy="135.7" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 5: max |F| = 2.642e-18</title></g>
+<g><circle cx="370.5" cy="170.9" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 6: max |F| = 4.371e-37</title></g>
+<g><circle cx="418.2" cy="220.5" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 7: max |F| = 1.548e-63</title></g>
+<g><circle cx="463.4" cy="221.9" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 8: max |F| = 2.849e-64</title></g>
+<g><circle cx="508.5" cy="222.4" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 9: max |F| = 1.543e-64</title></g>
+<g><circle cx="553.7" cy="222.8" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 10: max |F| = 9.496e-65</title></g>
+<g><circle cx="598.8" cy="223.0" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 11: max |F| = 7.240e-65</title></g>
+<g><circle cx="644.0" cy="223.0" r="5.5" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>quad-double, step 12: max |F| = 7.596e-65</title></g>
+<g><circle cx="107.1" cy="101.5" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 0: max |F| = 4.712e+00</title></g>
+<g><circle cx="152.2" cy="102.8" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 1: max |F| = 9.849e-01</title></g>
+<g><circle cx="197.4" cy="105.0" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 2: max |F| = 6.291e-02</title></g>
+<g><circle cx="242.5" cy="109.4" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 3: max |F| = 2.945e-04</title></g>
+<g><circle cx="287.7" cy="118.1" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 4: max |F| = 6.330e-09</title></g>
+<g><circle cx="332.9" cy="135.7" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 5: max |F| = 2.642e-18</title></g>
+<g><circle cx="375.5" cy="170.9" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 6: max |F| = 4.371e-37</title></g>
+<g><circle cx="418.2" cy="241.4" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 7: max |F| = 1.180e-74</title></g>
+<g><circle cx="463.4" cy="346.1" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 8: max |F| = 1.691e-130</title></g>
+<g><circle cx="508.5" cy="346.6" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 9: max |F| = 9.017e-131</title></g>
+<g><circle cx="553.7" cy="348.8" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 10: max |F| = 5.635e-132</title></g>
+<g><circle cx="598.8" cy="348.8" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 11: max |F| = 5.635e-132</title></g>
+<g><circle cx="644.0" cy="348.8" r="5.5" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/><title>octo-double, step 12: max |F| = 5.635e-132</title></g>
+<circle cx="373.0" cy="161.0" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="380.3" y1="154.2" x2="403.0" y2="133.0" stroke="#0b0b0b" stroke-width="1"/>
+<text x="407.0" y="137.0" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="bold">double-double: 5e-32</text>
+<circle cx="463.4" cy="221.9" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="470.7" y1="215.1" x2="493.4" y2="193.9" stroke="#0b0b0b" stroke-width="1"/>
+<text x="497.4" y="197.9" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="bold">quad-double: 7e-65</text>
+<circle cx="553.7" cy="348.8" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="561.2" y1="355.4" x2="583.7" y2="374.8" stroke="#0b0b0b" stroke-width="1"/>
+<text x="587.7" y="378.8" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="bold">octo-double: 6e-132</text>
+<text x="644.0" y="60.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">octo-double</text>
+<circle cx="563.8" cy="56" r="4.5" fill="#1baf7a"/>
+<text x="547.8" y="60.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">quad-double</text>
+<circle cx="467.6" cy="56" r="4.5" fill="#eb6834"/>
+<text x="451.6" y="60.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">double-double</text>
+<circle cx="358.7" cy="56" r="4.5" fill="#2a78d6"/>
+<text x="16.0" y="446.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">multisolver 0.2.2  ·  multidouble 5.1.0  ·  examples/graphs.rs  ·  Apple M5, 32 GB, macOS 27.0.1</text>
+<a href="https://github.com/nmoinvaz/multisolver"><text x="704" y="446" font-size="10" fill="#52514e" text-anchor="end" text-decoration="underline">github.com/nmoinvaz/multisolver</text></a>
+</svg>

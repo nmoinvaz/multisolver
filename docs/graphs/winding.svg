@@ -1,0 +1,364 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="468" viewBox="0 0 900 468" font-family="system-ui, sans-serif">
+<style>@media (prefers-color-scheme: dark){[fill="#fcfcfb"]{fill:#201f1d}[stroke="#fcfcfb"]{stroke:#201f1d}[fill="#0b0b0b"]{fill:#e8e6e3}[stroke="#0b0b0b"]{stroke:#e8e6e3}[fill="#52514e"]{fill:#a8a49d}[stroke="#52514e"]{stroke:#a8a49d}[fill="#e7e6e2"]{fill:#343230}[stroke="#e7e6e2"]{stroke:#343230}[fill="#c98500"]{fill:#d69a2d}[stroke="#c98500"]{stroke:#d69a2d}[fill="#eb6834"]{fill:#dd5c26}[stroke="#eb6834"]{stroke:#dd5c26}[fill="#eda100"]{fill:#c08800}[stroke="#eda100"]{stroke:#c08800}[fill="#e87ba4"]{fill:#d1678f}[stroke="#e87ba4"]{stroke:#d1678f}[fill="#4a3aa7"]{fill:#7263cf}[stroke="#4a3aa7"]{stroke:#7263cf}[fill="#a6339a"]{fill:#c257b5}[stroke="#a6339a"]{stroke:#c257b5}[fill="#7a7668"]{fill:#948e82}[stroke="#7a7668"]{stroke:#948e82}}</style>
+<rect width="900" height="468" fill="#fcfcfb"/>
+<text x="16.0" y="22.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="normal">Counting zeros by the argument principle</text>
+<text x="16.0" y="38.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">g with six zeros, four inside the square; 96 adaptive samples, bisected where arg g or ln|g| changes fast, 35 of them on the edge by the close pair</text>
+<text x="16.0" y="54.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">the first moment, 0.9707 + 0.6779i, is the sum of the zeros inside</text>
+<line x1="120.2" y1="94.0" x2="120.2" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="120.2" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">-1.0</text>
+<line x1="214.0" y1="94.0" x2="214.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="214.0" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">0.0</text>
+<line x1="307.8" y1="94.0" x2="307.8" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="307.8" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">1.0</text>
+<line x1="64.0" y1="337.8" x2="364.0" y2="337.8" stroke="#e7e6e2" stroke-width="1"/>
+<text x="58.0" y="341.8" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">-1.0</text>
+<line x1="64.0" y1="244.0" x2="364.0" y2="244.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="58.0" y="248.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">0.0</text>
+<line x1="64.0" y1="150.2" x2="364.0" y2="150.2" stroke="#e7e6e2" stroke-width="1"/>
+<text x="58.0" y="154.2" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1.0</text>
+<line x1="64.0" y1="394.0" x2="364.0" y2="394.0" stroke="#52514e" stroke-width="1"/>
+<line x1="64.0" y1="94.0" x2="64.0" y2="394.0" stroke="#52514e" stroke-width="1"/>
+<text x="214.0" y="428.0" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="normal">Re λ</text>
+<text x="20.5" y="244.0" font-size="12" fill="#0b0b0b" text-anchor="middle" transform="rotate(-90 20.5 244.0)">Im λ</text>
+<polyline points="120.2,337.8 307.8,337.8 307.8,150.2 120.2,150.2 120.2,337.8" fill="none" stroke="#52514e" stroke-width="1.5"/>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0200" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -1.0000i, 0.000 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0304" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="129.6" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.9000 -1.0000i, 0.041 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0408" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="139.0" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.8000 -1.0000i, 0.087 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0511" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="148.4" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.7000 -1.0000i, 0.138 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0615" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="157.8" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.6000 -1.0000i, 0.194 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0719" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="167.1" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.5000 -1.0000i, 0.255 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0771" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="171.8" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.4500 -1.0000i, 0.286 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0823" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="176.5" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.4000 -1.0000i, 0.318 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0874" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="181.2" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.3500 -1.0000i, 0.350 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0926" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="185.9" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.3000 -1.0000i, 0.382 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1030" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="195.2" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.2000 -1.0000i, 0.444 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1134" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="204.6" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -0.1000 -1.0000i, 0.503 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1238" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="214.0" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.0000 -1.0000i, 0.560 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1341" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="223.4" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.1000 -1.0000i, 0.615 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1445" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="232.8" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.2000 -1.0000i, 0.670 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1549" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="242.1" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.3000 -1.0000i, 0.723 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1653" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="251.5" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.4000 -1.0000i, 0.778 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1756" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="260.9" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.5000 -1.0000i, 0.833 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1860" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="270.2" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.6000 -1.0000i, 0.890 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1964" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="279.6" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.7000 -1.0000i, 0.950 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2016" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="284.3" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.7500 -1.0000i, 0.981 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2068" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="289.0" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.8000 -1.0000i, 1.013 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2119" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="293.7" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.8500 -1.0000i, 1.047 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2171" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="298.4" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.9000 -1.0000i, 1.081 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2223" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="303.1" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 0.9500 -1.0000i, 1.116 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2275" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -1.0000i, 1.151 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2379" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="328.4" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.9000i, 1.163 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2483" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="319.0" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.8000i, 1.169 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2586" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="309.6" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.7000i, 1.160 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2690" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="300.2" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.6000i, 1.103 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2742" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="295.6" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.5500i, 1.043 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2794" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="290.9" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.5000i, 0.983 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2898" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="281.5" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.4000i, 0.931 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3001" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="272.1" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.3000i, 0.931 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3105" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="262.8" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.2000i, 0.952 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3209" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="253.4" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 -0.1000i, 0.987 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3313" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="244.0" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.0000i, 1.036 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3364" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="239.3" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.0500i, 1.068 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3416" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="234.6" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.1000i, 1.109 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3468" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="229.9" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.1500i, 1.161 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3494" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="227.6" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.1750i, 1.193 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3520" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="225.2" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.2000i, 1.230 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3546" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="222.9" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.2250i, 1.273 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3572" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="220.6" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.2500i, 1.323 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3598" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="218.2" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.2750i, 1.379 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3624" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="215.9" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.3000i, 1.439 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3650" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="213.5" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.3250i, 1.501 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3676" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="211.2" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.3500i, 1.562 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3702" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="208.8" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.3750i, 1.619 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3728" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="206.5" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.4000i, 1.671 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3753" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="204.2" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.4250i, 1.715 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3779" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="201.8" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.4500i, 1.754 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3805" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="199.5" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.4750i, 1.788 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3831" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="197.1" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.5000i, 1.817 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3883" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="192.4" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.5500i, 1.866 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3935" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="187.8" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.6000i, 1.905 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4039" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="178.4" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.7000i, 1.966 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4143" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="169.0" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.8000i, 2.015 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4246" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="159.6" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +0.9000i, 2.056 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4350" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.8" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 1.0000 +1.0000i, 2.094 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4454" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="298.4" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.9000 +1.0000i, 2.156 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4506" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="293.7" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.8500 +1.0000i, 2.187 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4558" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="289.0" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.8000 +1.0000i, 2.219 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4661" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="279.6" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.7000 +1.0000i, 2.281 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4765" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="270.2" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.6000 +1.0000i, 2.341 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4869" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="260.9" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.5000 +1.0000i, 2.397 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4973" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="251.5" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.4000 +1.0000i, 2.449 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5076" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="242.1" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.3000 +1.0000i, 2.498 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5180" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="232.8" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.2000 +1.0000i, 2.542 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5284" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="223.4" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.1000 +1.0000i, 2.583 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5388" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="214.0" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = 0.0000 +1.0000i, 2.621 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5491" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="204.6" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = -0.1000 +1.0000i, 2.656 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5595" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="195.2" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = -0.2000 +1.0000i, 2.687 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5803" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="176.5" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = -0.4000 +1.0000i, 2.736 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6010" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="157.8" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = -0.6000 +1.0000i, 2.776 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6218" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="139.0" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = -0.8000 +1.0000i, 2.815 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6425" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="150.2" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +1.0000i, 2.852 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6529" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="159.6" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.9000i, 2.910 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6633" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="169.0" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.8000i, 2.968 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6736" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="178.4" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.7000i, 3.028 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6840" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="187.8" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.6000i, 3.088 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6944" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="197.1" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.5000i, 3.149 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7048" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="206.5" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.4000i, 3.210 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7151" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="215.9" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.3000i, 3.270 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7255" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="225.2" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.2000i, 3.329 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7359" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="234.6" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.1000i, 3.387 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7463" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="244.0" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 +0.0000i, 3.445 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7566" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="253.4" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.1000i, 3.503 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7670" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="262.8" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.2000i, 3.562 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7774" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="272.1" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.3000i, 3.622 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7878" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="281.5" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.4000i, 3.683 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7981" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="290.9" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.5000i, 3.744 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8085" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="300.2" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.6000i, 3.804 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8189" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="309.6" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.7000i, 3.860 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8293" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="319.0" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.8000i, 3.911 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8396" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="328.4" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -0.9000i, 3.958 turns so far</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8500" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="120.2" cy="337.8" r="2.6" fill="#2a78d6"/><title>λ = -1.0000 -1.0000i, 4.000 turns so far</title></g>
+</g>
+<g><polygon points="292.4,209.4 296.8,209.4 296.8,213.7 301.1,213.7 301.1,218.1 296.8,218.1 296.8,222.4 292.4,222.4 292.4,218.1 288.1,218.1 288.1,213.7 292.4,213.7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>zero at 0.86 +0.3i, inside</title></g>
+<g><polygon points="292.4,206.6 296.8,206.6 296.8,210.9 301.1,210.9 301.1,215.3 296.8,215.3 296.8,219.6 292.4,219.6 292.4,215.3 288.1,215.3 288.1,210.9 292.4,210.9" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>zero at 0.86 +0.33i, inside</title></g>
+<g><polygon points="169.6,284.4 174.0,284.4 174.0,288.7 178.3,288.7 178.3,293.1 174.0,293.1 174.0,297.4 169.6,297.4 169.6,293.1 165.3,293.1 165.3,288.7 169.6,288.7" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>zero at -0.45 -0.5i, inside</title></g>
+<g><polygon points="183.7,185.9 188.1,185.9 188.1,190.2 192.4,190.2 192.4,194.6 188.1,194.6 188.1,198.9 183.7,198.9 183.7,194.6 179.4,194.6 179.4,190.2 183.7,190.2" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>zero at -0.3 +0.55i, inside</title></g>
+<g><rect x="311.6" y="290.1" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>zero at 1.1 -0.55i, outside</title></g>
+<g><rect x="175.7" y="107.2" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>zero at -0.35 +1.4i, outside</title></g>
+<circle cx="294.6" cy="214.5" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="288.6" y1="222.5" x2="264.6" y2="254.5" stroke="#0b0b0b" stroke-width="1"/>
+<text x="260.6" y="258.5" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="bold">close pair</text>
+<circle cx="120.2" cy="337.8" r="4" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="2"><animate attributeName="cx" values="120.2;120.2;129.6;139.0;148.4;157.8;167.1;171.8;176.5;181.2;185.9;195.2;204.6;214.0;223.4;232.8;242.1;251.5;260.9;270.2;279.6;284.3;289.0;293.7;298.4;303.1;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;307.8;298.4;293.7;289.0;279.6;270.2;260.9;251.5;242.1;232.8;223.4;214.0;204.6;195.2;176.5;157.8;139.0;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2;120.2" keyTimes="0.0000;0.0200;0.0304;0.0408;0.0511;0.0615;0.0719;0.0771;0.0823;0.0874;0.0926;0.1030;0.1134;0.1238;0.1341;0.1445;0.1549;0.1653;0.1756;0.1860;0.1964;0.2016;0.2068;0.2119;0.2171;0.2223;0.2275;0.2379;0.2483;0.2586;0.2690;0.2742;0.2794;0.2898;0.3001;0.3105;0.3209;0.3313;0.3364;0.3416;0.3468;0.3494;0.3520;0.3546;0.3572;0.3598;0.3624;0.3650;0.3676;0.3702;0.3728;0.3753;0.3779;0.3805;0.3831;0.3883;0.3935;0.4039;0.4143;0.4246;0.4350;0.4454;0.4506;0.4558;0.4661;0.4765;0.4869;0.4973;0.5076;0.5180;0.5284;0.5388;0.5491;0.5595;0.5803;0.6010;0.6218;0.6425;0.6529;0.6633;0.6736;0.6840;0.6944;0.7048;0.7151;0.7255;0.7359;0.7463;0.7566;0.7670;0.7774;0.7878;0.7981;0.8085;0.8189;0.8293;0.8396;0.8500;1.0000" dur="10s" repeatCount="indefinite"/><animate attributeName="cy" values="337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;337.8;328.4;319.0;309.6;300.2;295.6;290.9;281.5;272.1;262.8;253.4;244.0;239.3;234.6;229.9;227.6;225.2;222.9;220.6;218.2;215.9;213.5;211.2;208.8;206.5;204.2;201.8;199.5;197.1;192.4;187.8;178.4;169.0;159.6;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;150.2;159.6;169.0;178.4;187.8;197.1;206.5;215.9;225.2;234.6;244.0;253.4;262.8;272.1;281.5;290.9;300.2;309.6;319.0;328.4;337.8;337.8" keyTimes="0.0000;0.0200;0.0304;0.0408;0.0511;0.0615;0.0719;0.0771;0.0823;0.0874;0.0926;0.1030;0.1134;0.1238;0.1341;0.1445;0.1549;0.1653;0.1756;0.1860;0.1964;0.2016;0.2068;0.2119;0.2171;0.2223;0.2275;0.2379;0.2483;0.2586;0.2690;0.2742;0.2794;0.2898;0.3001;0.3105;0.3209;0.3313;0.3364;0.3416;0.3468;0.3494;0.3520;0.3546;0.3572;0.3598;0.3624;0.3650;0.3676;0.3702;0.3728;0.3753;0.3779;0.3805;0.3831;0.3883;0.3935;0.4039;0.4143;0.4246;0.4350;0.4454;0.4506;0.4558;0.4661;0.4765;0.4869;0.4973;0.5076;0.5180;0.5284;0.5388;0.5491;0.5595;0.5803;0.6010;0.6218;0.6425;0.6529;0.6633;0.6736;0.6840;0.6944;0.7048;0.7151;0.7255;0.7359;0.7463;0.7566;0.7670;0.7774;0.7878;0.7981;0.8085;0.8189;0.8293;0.8396;0.8500;1.0000" dur="10s" repeatCount="indefinite"/></circle>
+<line x1="494.0" y1="94.0" x2="494.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="494.0" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">0</text>
+<line x1="589.0" y1="94.0" x2="589.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="589.0" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">2</text>
+<line x1="684.0" y1="94.0" x2="684.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="684.0" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">4</text>
+<line x1="779.0" y1="94.0" x2="779.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="779.0" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">6</text>
+<line x1="874.0" y1="94.0" x2="874.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="874.0" y="409.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">8</text>
+<line x1="494.0" y1="394.0" x2="874.0" y2="394.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="488.0" y="398.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">0.0</text>
+<line x1="494.0" y1="327.3" x2="874.0" y2="327.3" stroke="#e7e6e2" stroke-width="1"/>
+<text x="488.0" y="331.3" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1.0</text>
+<line x1="494.0" y1="260.7" x2="874.0" y2="260.7" stroke="#e7e6e2" stroke-width="1"/>
+<text x="488.0" y="264.7" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">2.0</text>
+<line x1="494.0" y1="194.0" x2="874.0" y2="194.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="488.0" y="198.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">3.0</text>
+<line x1="494.0" y1="127.3" x2="874.0" y2="127.3" stroke="#e7e6e2" stroke-width="1"/>
+<text x="488.0" y="131.3" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">4.0</text>
+<line x1="494.0" y1="394.0" x2="874.0" y2="394.0" stroke="#52514e" stroke-width="1"/>
+<line x1="494.0" y1="94.0" x2="494.0" y2="394.0" stroke="#52514e" stroke-width="1"/>
+<text x="684.0" y="428.0" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="normal">position along the contour</text>
+<text x="456.9" y="244.0" font-size="12" fill="#0b0b0b" text-anchor="middle" transform="rotate(-90 456.9 244.0)">arg g so far (turns)</text>
+<path d="M494.0 394.0 L498.8 391.3 L503.5 388.2 L508.2 384.8 L513.0 381.1 L517.8 377.0 L520.1 374.9 L522.5 372.8 L524.9 370.7 L527.2 368.5 L532.0 364.4 L536.8 360.5 L541.5 356.7 L546.3 353.0 L551.0 349.4 L555.8 345.8 L560.5 342.2 L565.3 338.5 L570.0 334.7 L574.8 330.7 L577.1 328.6 L579.5 326.4 L581.9 324.2 L584.3 322.0 L586.6 319.6 L589.0 317.2 L593.8 316.5 L598.5 316.1 L603.3 316.7 L608.0 320.5 L610.4 324.5 L612.8 328.4 L617.5 331.9 L622.3 331.9 L627.0 330.5 L631.8 328.2 L636.5 324.9 L638.9 322.8 L641.3 320.1 L643.6 316.6 L644.8 314.5 L646.0 312.0 L647.2 309.1 L648.4 305.8 L649.6 302.1 L650.8 298.1 L651.9 293.9 L653.1 289.8 L654.3 286.0 L655.5 282.6 L656.7 279.6 L657.9 277.0 L659.1 274.8 L660.3 272.8 L662.6 269.6 L665.0 267.0 L669.8 262.9 L674.5 259.7 L679.3 256.9 L684.0 254.4 L688.8 250.3 L691.1 248.2 L693.5 246.1 L698.3 241.9 L703.0 237.9 L707.8 234.2 L712.5 230.7 L717.3 227.5 L722.0 224.5 L726.8 221.8 L731.5 219.2 L736.3 216.9 L741.0 214.9 L750.5 211.6 L760.0 208.9 L769.5 206.4 L779.0 203.9 L783.8 200.0 L788.5 196.1 L793.3 192.1 L798.0 188.1 L802.8 184.1 L807.5 180.0 L812.3 176.0 L817.0 172.1 L821.8 168.2 L826.5 164.4 L831.3 160.5 L836.0 156.5 L840.8 152.5 L845.5 148.4 L850.2 144.4 L855.0 140.4 L859.8 136.7 L864.5 133.3 L869.2 130.1 L874.0 127.3" fill="none" stroke="#2a78d6" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="499.6 499.6"><animate attributeName="stroke-dashoffset" values="498.6;498.6;493.1;487.5;481.6;475.6;469.3;466.2;463.0;459.8;456.6;450.3;444.1;438.0;432.0;426.1;420.1;414.1;408.1;402.0;395.8;392.7;389.5;386.2;382.9;379.6;376.2;371.4;366.7;361.9;355.8;351.1;346.5;340.6;335.9;330.9;325.6;319.9;316.6;313.1;308.9;306.4;303.6;300.5;297.0;293.1;288.9;284.6;280.4;276.4;272.8;269.5;266.7;264.2;261.9;257.8;254.3;248.1;242.3;236.8;231.5;225.2;222.0;218.8;212.5;206.3;200.2;194.4;188.6;183.0;177.5;172.1;166.9;161.7;151.6;141.8;131.9;122.1;116.0;109.8;103.6;97.4;91.2;84.9;78.7;72.6;66.4;60.3;54.2;48.0;41.8;35.5;29.3;23.1;17.1;11.2;5.5;0.0;0.0" keyTimes="0.0000;0.0200;0.0304;0.0408;0.0511;0.0615;0.0719;0.0771;0.0823;0.0874;0.0926;0.1030;0.1134;0.1238;0.1341;0.1445;0.1549;0.1653;0.1756;0.1860;0.1964;0.2016;0.2068;0.2119;0.2171;0.2223;0.2275;0.2379;0.2483;0.2586;0.2690;0.2742;0.2794;0.2898;0.3001;0.3105;0.3209;0.3313;0.3364;0.3416;0.3468;0.3494;0.3520;0.3546;0.3572;0.3598;0.3624;0.3650;0.3676;0.3702;0.3728;0.3753;0.3779;0.3805;0.3831;0.3883;0.3935;0.4039;0.4143;0.4246;0.4350;0.4454;0.4506;0.4558;0.4661;0.4765;0.4869;0.4973;0.5076;0.5180;0.5284;0.5388;0.5491;0.5595;0.5803;0.6010;0.6218;0.6425;0.6529;0.6633;0.6736;0.6840;0.6944;0.7048;0.7151;0.7255;0.7359;0.7463;0.7566;0.7670;0.7774;0.7878;0.7981;0.8085;0.8189;0.8293;0.8396;0.8500;1.0000" dur="10s" repeatCount="indefinite"/></path>
+<circle cx="874.0" cy="127.3" r="4" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="2"><animate attributeName="cx" values="494.0;494.0;498.8;503.5;508.2;513.0;517.8;520.1;522.5;524.9;527.2;532.0;536.8;541.5;546.3;551.0;555.8;560.5;565.3;570.0;574.8;577.1;579.5;581.9;584.3;586.6;589.0;593.8;598.5;603.3;608.0;610.4;612.8;617.5;622.3;627.0;631.8;636.5;638.9;641.3;643.6;644.8;646.0;647.2;648.4;649.6;650.8;651.9;653.1;654.3;655.5;656.7;657.9;659.1;660.3;662.6;665.0;669.8;674.5;679.3;684.0;688.8;691.1;693.5;698.3;703.0;707.8;712.5;717.3;722.0;726.8;731.5;736.3;741.0;750.5;760.0;769.5;779.0;783.8;788.5;793.3;798.0;802.8;807.5;812.3;817.0;821.8;826.5;831.3;836.0;840.8;845.5;850.2;855.0;859.8;864.5;869.2;874.0;874.0" keyTimes="0.0000;0.0200;0.0304;0.0408;0.0511;0.0615;0.0719;0.0771;0.0823;0.0874;0.0926;0.1030;0.1134;0.1238;0.1341;0.1445;0.1549;0.1653;0.1756;0.1860;0.1964;0.2016;0.2068;0.2119;0.2171;0.2223;0.2275;0.2379;0.2483;0.2586;0.2690;0.2742;0.2794;0.2898;0.3001;0.3105;0.3209;0.3313;0.3364;0.3416;0.3468;0.3494;0.3520;0.3546;0.3572;0.3598;0.3624;0.3650;0.3676;0.3702;0.3728;0.3753;0.3779;0.3805;0.3831;0.3883;0.3935;0.4039;0.4143;0.4246;0.4350;0.4454;0.4506;0.4558;0.4661;0.4765;0.4869;0.4973;0.5076;0.5180;0.5284;0.5388;0.5491;0.5595;0.5803;0.6010;0.6218;0.6425;0.6529;0.6633;0.6736;0.6840;0.6944;0.7048;0.7151;0.7255;0.7359;0.7463;0.7566;0.7670;0.7774;0.7878;0.7981;0.8085;0.8189;0.8293;0.8396;0.8500;1.0000" dur="10s" repeatCount="indefinite"/><animate attributeName="cy" values="394.0;394.0;391.3;388.2;384.8;381.1;377.0;374.9;372.8;370.7;368.5;364.4;360.5;356.7;353.0;349.4;345.8;342.2;338.5;334.7;330.7;328.6;326.4;324.2;322.0;319.6;317.2;316.5;316.1;316.7;320.5;324.5;328.4;331.9;331.9;330.5;328.2;324.9;322.8;320.1;316.6;314.5;312.0;309.1;305.8;302.1;298.1;293.9;289.8;286.0;282.6;279.6;277.0;274.8;272.8;269.6;267.0;262.9;259.7;256.9;254.4;250.3;248.2;246.1;241.9;237.9;234.2;230.7;227.5;224.5;221.8;219.2;216.9;214.9;211.6;208.9;206.4;203.9;200.0;196.1;192.1;188.1;184.1;180.0;176.0;172.1;168.2;164.4;160.5;156.5;152.5;148.4;144.4;140.4;136.7;133.3;130.1;127.3;127.3" keyTimes="0.0000;0.0200;0.0304;0.0408;0.0511;0.0615;0.0719;0.0771;0.0823;0.0874;0.0926;0.1030;0.1134;0.1238;0.1341;0.1445;0.1549;0.1653;0.1756;0.1860;0.1964;0.2016;0.2068;0.2119;0.2171;0.2223;0.2275;0.2379;0.2483;0.2586;0.2690;0.2742;0.2794;0.2898;0.3001;0.3105;0.3209;0.3313;0.3364;0.3416;0.3468;0.3494;0.3520;0.3546;0.3572;0.3598;0.3624;0.3650;0.3676;0.3702;0.3728;0.3753;0.3779;0.3805;0.3831;0.3883;0.3935;0.4039;0.4143;0.4246;0.4350;0.4454;0.4506;0.4558;0.4661;0.4765;0.4869;0.4973;0.5076;0.5180;0.5284;0.5388;0.5491;0.5595;0.5803;0.6010;0.6218;0.6425;0.6529;0.6633;0.6736;0.6840;0.6944;0.7048;0.7151;0.7255;0.7359;0.7463;0.7566;0.7670;0.7774;0.7878;0.7981;0.8085;0.8189;0.8293;0.8396;0.8500;1.0000" dur="10s" repeatCount="indefinite"/></circle>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8500" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<circle cx="874.0" cy="127.3" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="865.8" y1="121.6" x2="834.0" y2="99.3" stroke="#0b0b0b" stroke-width="1"/>
+<text x="830.0" y="103.3" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="bold">4 turns: 4 zeros inside</text>
+</g>
+<text x="874.0" y="70.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">zeros outside</text>
+<circle cx="781.1" cy="66" r="4.5" fill="#7a7668"/>
+<text x="765.1" y="70.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">zeros inside</text>
+<circle cx="678.5" cy="66" r="4.5" fill="#eb6834"/>
+<text x="662.5" y="70.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">samples</text>
+<circle cx="607.8" cy="66" r="4.5" fill="#2a78d6"/>
+<text x="16.0" y="456.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">multisolver 0.2.2  ·  multidouble 5.1.0  ·  examples/graphs.rs  ·  Apple M5, 32 GB, macOS 27.0.1</text>
+<a href="https://github.com/nmoinvaz/multisolver"><text x="884" y="456" font-size="10" fill="#52514e" text-anchor="end" text-decoration="underline">github.com/nmoinvaz/multisolver</text></a>
+</svg>

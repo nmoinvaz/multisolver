@@ -38,6 +38,32 @@ series of order N costs N orders rather than N evaluations of growing length.
 
 **Status:** early. The API may change between minor versions until 1.0.
 
+## Graphs
+
+Planted problems with known solutions, from `cargo run --release --example graphs`, drawn by
+`python3 scripts/graphs.py`. The last three are animated.
+
+Newton's method takes the same steps in every precision until it reaches that precision's floor.
+
+![Newton's method in three precisions](docs/graphs/ladder.svg)
+
+In octo-double, the Newton matrix factored in double-double reaches the same accuracy in 95% less time.
+
+![Time to accuracy in octo-double](docs/graphs/time.svg)
+
+Pseudo-arclength continuation follows a branch through both of its folds and locates them, where continuation in the
+parameter stops at the first.
+
+![Pseudo-arclength continuation through two folds](docs/graphs/fold.svg)
+
+Deflation finds all five roots of z⁵ = 1 from one start.
+
+![Five roots of z^5 = 1 from one start](docs/graphs/deflation.svg)
+
+The argument principle counts the zeros inside a square, its samples densest by a close pair of zeros.
+
+![Counting zeros by the argument principle](docs/graphs/winding.svg)
+
 ## Building
 
 ```

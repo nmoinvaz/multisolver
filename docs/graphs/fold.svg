@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="478" viewBox="0 0 720 478" font-family="system-ui, sans-serif">
+<style>@media (prefers-color-scheme: dark){[fill="#fcfcfb"]{fill:#201f1d}[stroke="#fcfcfb"]{stroke:#201f1d}[fill="#0b0b0b"]{fill:#e8e6e3}[stroke="#0b0b0b"]{stroke:#e8e6e3}[fill="#52514e"]{fill:#a8a49d}[stroke="#52514e"]{stroke:#a8a49d}[fill="#e7e6e2"]{fill:#343230}[stroke="#e7e6e2"]{stroke:#343230}[fill="#c98500"]{fill:#d69a2d}[stroke="#c98500"]{stroke:#d69a2d}[fill="#eb6834"]{fill:#dd5c26}[stroke="#eb6834"]{stroke:#dd5c26}[fill="#eda100"]{fill:#c08800}[stroke="#eda100"]{stroke:#c08800}[fill="#e87ba4"]{fill:#d1678f}[stroke="#e87ba4"]{stroke:#d1678f}[fill="#4a3aa7"]{fill:#7263cf}[stroke="#4a3aa7"]{stroke:#7263cf}[fill="#a6339a"]{fill:#c257b5}[stroke="#a6339a"]{stroke:#c257b5}[fill="#7a7668"]{fill:#948e82}[stroke="#7a7668"]{stroke:#948e82}}</style>
+<rect width="720" height="478" fill="#fcfcfb"/>
+<text x="16.0" y="22.0" font-size="12" fill="#0b0b0b" text-anchor="start" font-weight="normal">Pseudo-arclength continuation through two folds</text>
+<text x="16.0" y="38.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">the branch p = z₁³ - 3 z₁ of a mixed 2-unknown family, steps sized by the corrector's contraction; continuation in p stops at the first fold</text>
+<line x1="128.0" y1="84.0" x2="128.0" y2="404.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="128.0" y="419.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">-4</text>
+<line x1="244.0" y1="84.0" x2="244.0" y2="404.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="244.0" y="419.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">-2</text>
+<line x1="360.0" y1="84.0" x2="360.0" y2="404.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="360.0" y="419.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">0</text>
+<line x1="476.0" y1="84.0" x2="476.0" y2="404.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="476.0" y="419.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">2</text>
+<line x1="592.0" y1="84.0" x2="592.0" y2="404.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="592.0" y="419.0" font-size="11" fill="#52514e" text-anchor="middle" font-weight="normal" font-variant-numeric="tabular-nums">4</text>
+<line x1="70.0" y1="372.0" x2="650.0" y2="372.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="64.0" y="376.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">-2</text>
+<line x1="70.0" y1="308.0" x2="650.0" y2="308.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="64.0" y="312.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">-1</text>
+<line x1="70.0" y1="244.0" x2="650.0" y2="244.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="64.0" y="248.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">0</text>
+<line x1="70.0" y1="180.0" x2="650.0" y2="180.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="64.0" y="184.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">1</text>
+<line x1="70.0" y1="116.0" x2="650.0" y2="116.0" stroke="#e7e6e2" stroke-width="1"/>
+<text x="64.0" y="120.0" font-size="11" fill="#52514e" text-anchor="end" font-weight="normal" font-variant-numeric="tabular-nums">2</text>
+<line x1="70.0" y1="404.0" x2="650.0" y2="404.0" stroke="#52514e" stroke-width="1"/>
+<line x1="70.0" y1="84.0" x2="70.0" y2="404.0" stroke="#52514e" stroke-width="1"/>
+<text x="360.0" y="438.0" font-size="12" fill="#0b0b0b" text-anchor="middle" font-weight="normal">parameter p</text>
+<text x="39.2" y="244.0" font-size="12" fill="#0b0b0b" text-anchor="middle" transform="rotate(-90 39.2 244.0)">unknown z₁</text>
+<g><rect x="85.3" y="382.5" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -4.64, z1 = -2.250000</title></g>
+<g><rect x="108.5" y="380.4" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -4.24, z1 = -2.216563</title></g>
+<g><rect x="131.7" y="378.1" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -3.84, z1 = -2.181810</title></g>
+<g><rect x="154.9" y="375.8" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -3.44, z1 = -2.145595</title></g>
+<g><rect x="178.1" y="373.4" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -3.04, z1 = -2.107746</title></g>
+<g><rect x="201.3" y="370.9" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -2.64, z1 = -2.068058</title></g>
+<g><rect x="224.5" y="368.2" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -2.24, z1 = -2.026274</title></g>
+<g><rect x="247.7" y="365.4" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -1.84, z1 = -1.982078</title></g>
+<g><rect x="270.9" y="362.3" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -1.44, z1 = -1.935067</title></g>
+<g><rect x="294.1" y="359.1" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -1.04, z1 = -1.884712</title></g>
+<g><rect x="317.3" y="355.6" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -0.64, z1 = -1.830303</title></g>
+<g><rect x="340.5" y="351.8" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = -0.24, z1 = -1.770842</title></g>
+<g><rect x="363.7" y="347.6" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = 0.16, z1 = -1.704851</title></g>
+<g><rect x="386.9" y="342.8" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = 0.56, z1 = -1.629975</title></g>
+<g><rect x="410.1" y="337.2" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = 0.96, z1 = -1.542027</title></g>
+<g><rect x="433.3" y="330.2" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = 1.36, z1 = -1.432042</title></g>
+<g><rect x="456.5" y="319.9" width="11.0" height="11.0" fill="#7a7668" stroke="#fcfcfb" stroke-width="2"/><title>continuation in p: p = 1.76, z1 = -1.271216</title></g>
+<path d="M90.8 388.0 L105.3 386.7 L134.1 383.9 L168.7 380.5 L203.3 376.8 L237.9 372.7 L272.5 368.4 L307.0 363.5 L341.4 358.1 L375.8 351.8 L409.8 344.2 L443.0 334.1 L472.5 316.9 L474.2 301.5 L459.4 287.1 L430.9 271.8 L400.1 259.0 L368.4 247.1 L336.2 235.2 L303.8 222.5 L271.7 207.6 L244.3 182.7 L262.9 159.9 L289.9 149.5 L318.8 141.7 L348.6 135.3 L379.0 129.8 L409.7 124.9 L440.7 120.5 L471.9 116.5 L503.3 112.8 L534.8 109.3 L566.4 106.0 L598.1 102.9 L629.9 99.9" fill="none" stroke="#2a78d6" stroke-width="2.0" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="1071.7 1071.7"><animate attributeName="stroke-dashoffset" values="1070.7;1070.7;0;0" keyTimes="0;0.0300;0.8000;1" dur="10s" repeatCount="indefinite"/></path>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0300" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="90.8" cy="388.0" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -4.640625, z1 = -2.250000</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0404" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="105.3" cy="386.7" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -4.391988, z1 = -2.229364</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0612" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="134.1" cy="383.9" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -3.894715, z1 = -2.186591</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.0863" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="168.7" cy="380.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -3.298024, z1 = -2.132299</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1113" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="203.3" cy="376.8" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -2.701442, z1 = -2.074220</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1363" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="237.9" cy="372.7" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -2.105082, z1 = -2.011586</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1614" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="272.5" cy="368.4" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -1.509122, z1 = -1.943338</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.1865" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="307.0" cy="363.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -0.913867, z1 = -1.867949</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2115" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="341.4" cy="358.1" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -0.319876, z1 = -1.783086</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2366" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="375.8" cy="351.8" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 0.271720, z1 = -1.684852</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2617" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="409.8" cy="344.2" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 0.858240, z1 = -1.565855</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.2867" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="443.0" cy="334.1" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.431274, z1 = -1.408480</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3112" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="472.5" cy="316.9" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.939038, z1 = -1.139351</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3224" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="474.2" cy="301.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.969727, z1 = -0.897789</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3372" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="459.4" cy="287.1" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.714652, z1 = -0.673288</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3605" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="430.9" cy="271.8" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.221989, z1 = -0.434713</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3845" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="400.1" cy="259.0" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 0.691776, z1 = -0.234913</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4088" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="368.4" cy="247.1" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 0.145023, z1 = -0.048379</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4335" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="336.2" cy="235.2" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -0.410501, z1 = 0.137704</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4586" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="303.8" cy="222.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -0.969621, z1 = 0.335833</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.4840" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="271.7" cy="207.6" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -1.523134, z1 = 0.569174</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5106" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="244.3" cy="182.7" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -1.994902, z1 = 0.958487</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5317" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="262.9" cy="159.9" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -1.674702, z1 = 1.313334</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5526" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="289.9" cy="149.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -1.208686, z1 = 1.477055</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5741" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="318.8" cy="141.7" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -0.710101, z1 = 1.598695</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5961" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="348.6" cy="135.3" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = -0.195895, z1 = 1.698429</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6183" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="379.0" cy="129.8" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 0.327655, z1 = 1.784274</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6406" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="409.7" cy="124.9" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 0.857514, z1 = 1.860360</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6631" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="440.7" cy="120.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.391970, z1 = 1.929133</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.6858" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="471.9" cy="116.5" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 1.929953, z1 = 1.992176</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7085" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="503.3" cy="112.8" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 2.470746, z1 = 2.050585</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7313" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="534.8" cy="109.3" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 3.013843, z1 = 2.105149</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7541" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="566.4" cy="106.0" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 3.558872, z1 = 2.156462</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.7770" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="598.1" cy="102.9" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 4.105549, z1 = 2.204981</title></g>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.8000" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><circle cx="629.9" cy="99.9" r="5.5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/><title>p = 4.653654, z1 = 2.251068</title></g>
+</g>
+<circle cx="629.9" cy="99.9" r="4" fill="#0b0b0b" stroke="#fcfcfb" stroke-width="2"><animate attributeName="cx" values="90.8;90.8;105.3;134.1;168.7;203.3;237.9;272.5;307.0;341.4;375.8;409.8;443.0;472.5;474.2;459.4;430.9;400.1;368.4;336.2;303.8;271.7;244.3;262.9;289.9;318.8;348.6;379.0;409.7;440.7;471.9;503.3;534.8;566.4;598.1;629.9;629.9" keyTimes="0.0000;0.0300;0.0404;0.0612;0.0863;0.1113;0.1363;0.1614;0.1865;0.2115;0.2366;0.2617;0.2867;0.3112;0.3224;0.3372;0.3605;0.3845;0.4088;0.4335;0.4586;0.4840;0.5106;0.5317;0.5526;0.5741;0.5961;0.6183;0.6406;0.6631;0.6858;0.7085;0.7313;0.7541;0.7770;0.8000;1.0000" dur="10s" repeatCount="indefinite"/><animate attributeName="cy" values="388.0;388.0;386.7;383.9;380.5;376.8;372.7;368.4;363.5;358.1;351.8;344.2;334.1;316.9;301.5;287.1;271.8;259.0;247.1;235.2;222.5;207.6;182.7;159.9;149.5;141.7;135.3;129.8;124.9;120.5;116.5;112.8;109.3;106.0;102.9;99.9;99.9" keyTimes="0.0000;0.0300;0.0404;0.0612;0.0863;0.1113;0.1363;0.1614;0.1865;0.2115;0.2366;0.2617;0.2867;0.3112;0.3224;0.3372;0.3605;0.3845;0.4088;0.4335;0.4586;0.4840;0.5106;0.5317;0.5526;0.5741;0.5961;0.6183;0.6406;0.6631;0.6858;0.7085;0.7313;0.7541;0.7770;0.8000;1.0000" dur="10s" repeatCount="indefinite"/></circle>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.3224" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><polygon points="476.0,301.5 482.5,308.0 476.0,314.5 469.5,308.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>fold located: p = 2.000000000000000 (error 6.3e-48), z1 = -1.000000000000000 (error 8.4e-23)</title></g>
+<circle cx="476.0" cy="308.0" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="483.5" y1="301.4" x2="510.0" y2="278.0" stroke="#0b0b0b" stroke-width="1"/>
+<text x="514.0" y="282.0" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="bold">fold at p = 2, z₁ to 8e-23</text>
+</g>
+<g><animate attributeName="opacity" values="0;1" keyTimes="0;0.5106" calcMode="discrete" dur="10s" repeatCount="indefinite"/>
+<g><polygon points="244.0,173.5 250.5,180.0 244.0,186.5 237.5,180.0" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/><title>fold located: p = -2.000000000000000 (error 5.6e-32), z1 = 1.000000000000000 (error 1.4e-18)</title></g>
+<circle cx="244.0" cy="180.0" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="236.5" y1="186.6" x2="210.0" y2="210.0" stroke="#0b0b0b" stroke-width="1"/>
+<text x="206.0" y="214.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="bold">fold at p = -2, z₁ to 1e-18</text>
+</g>
+<circle cx="462.0" cy="325.4" r="10" fill="none" stroke="#0b0b0b" stroke-width="1.5"/>
+<line x1="468.4" y1="333.1" x2="490.0" y2="359.4" stroke="#0b0b0b" stroke-width="1"/>
+<text x="494.0" y="363.4" font-size="11" fill="#0b0b0b" text-anchor="start" font-weight="bold">continuation in p ends: Newton fails at p = 2.16</text>
+<text x="650.0" y="60.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">continuation in p</text>
+<circle cx="531.5" cy="56" r="4.5" fill="#7a7668"/>
+<text x="515.5" y="60.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">fold, located</text>
+<circle cx="422.6" cy="56" r="4.5" fill="#eb6834"/>
+<text x="406.6" y="60.0" font-size="11" fill="#0b0b0b" text-anchor="end" font-weight="normal">pseudo-arclength</text>
+<circle cx="294.5" cy="56" r="4.5" fill="#2a78d6"/>
+<text x="16.0" y="466.0" font-size="10" fill="#52514e" text-anchor="start" font-weight="normal">multisolver 0.2.2  ·  multidouble 5.1.0  ·  examples/graphs.rs  ·  Apple M5, 32 GB, macOS 27.0.1</text>
+<a href="https://github.com/nmoinvaz/multisolver"><text x="704" y="466" font-size="10" fill="#52514e" text-anchor="end" text-decoration="underline">github.com/nmoinvaz/multisolver</text></a>
+</svg>

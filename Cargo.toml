@@ -9,7 +9,7 @@ repository = "https://github.com/nmoinvaz/multisolver"
 readme = "README.md"
 keywords = ["newton", "nonlinear-solver", "extended-precision", "continuation", "argument-principle"]
 categories = ["mathematics", "science"]
-exclude = ["/.github", "/.claude", "/CLAUDE.md"]
+exclude = ["/.github", "/.claude", "/CLAUDE.md", "/docs", "/scripts"]
 
 [dependencies]
 # 4.5.0: the Precision trait (Double, Quad, Octo) and its LUs; the blocked complex LU
