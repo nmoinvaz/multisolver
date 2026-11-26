@@ -175,6 +175,81 @@ fn floor_control_rule_off_runs_on() {
     }
 }
 
+/// Newton's chord method (`newton_chord`, the factors of the start reused) on the coupled problem from 30% off the
+/// root, past its floor (tol 1e-60), with the floor rule on: (report, max |z - z*|). With `through_with` the same
+/// reused factors go through `newton_with`, which takes every factorization as formed at the step's iterate.
+fn chord_run(through_with: bool) -> (multisolver::NewtonReport, f64) {
+    let pr = Roots::coupled();
+    let mut z = pr.start(0.3);
+    let o = opts(1e-60, 10.0, Damping::Correction);
+    let rep = if through_with {
+        let f = multisolver::newton::reuse(1000, |z: &[&[f64]]| {
+            multisolver::newton::exact::<multisolver::Double, _>(&pr, z, false)
+        });
+        multisolver::newton::newton_with::<multisolver::Double, _, _>(&pr, &mut z, &o, f).unwrap()
+    } else {
+        multisolver::newton::newton_chord::<multisolver::Double, _>(&pr, &mut z, &o, 1000).unwrap()
+    };
+    (rep, pr.error(&z))
+}
+
+/// Pass: the chord method's reused factors contract its steps only linearly (by about 0.3 here); with the floor rule
+/// on, a reused factorization that gains too little is formed anew, so the run still ends at the floor, max |F| <=
+/// 1e-29 and max |z - z*| <= 1e-30. The control: the same factors through `newton_with`, taken as fresh, must stop
+/// the run early, above max |F| 1e-20.
+#[test]
+fn floor_rule_forms_reused_factors_again() {
+    let (rep, err) = chord_run(false);
+    let f = *rep.fnorm.last().unwrap();
+    println!(
+        "chord: {:?} after {} steps, max |F| {f:.3e}, max |z - z*| {err:.3e}",
+        rep.stop,
+        rep.scale.len()
+    );
+    assert!(
+        matches!(rep.stop, Stop::Floor { .. }) && f <= 1e-29 && err <= 1e-30,
+        "{rep:?}"
+    );
+    let (c, _) = chord_run(true);
+    let fc = *c.fnorm.last().unwrap();
+    println!(
+        "control, reused factors through newton_with: {:?} at max |F| {fc:.3e}",
+        c.stop
+    );
+    assert!(
+        matches!(c.stop, Stop::Floor { .. }) && fc > 1e-20,
+        "control did not fire: {c:?}"
+    );
+}
+
+/// Pass: `newton_quasi` without updates applies the floor rule as `newton` does, stopping at `Stop::Floor` at max |F|
+/// <= 1e-29 from 1e-3 off the root (tol 1e-60). The control: with the rule off it must end otherwise.
+#[test]
+fn quasi_newton_stops_at_the_floor() {
+    let run = |floor_cut: f64| {
+        let pr = Roots::coupled();
+        let mut z = pr.start(1e-3);
+        let q = multisolver::quasi::QuasiOpts {
+            max_updates: 0,
+            ..Default::default()
+        };
+        let f = |z: &[&[f64]]| multisolver::newton::exact::<multisolver::Double, _>(&pr, z, false);
+        let o = opts(1e-60, floor_cut, Damping::Correction);
+        multisolver::quasi::newton_quasi::<multisolver::Double, _, _>(&pr, &mut z, &o, &q, f)
+            .unwrap()
+            .0
+    };
+    let (on, off) = (run(10.0), run(0.0));
+    println!(
+        "quasi: rule on {:?} at {:.3e}; off {:?}",
+        on.stop,
+        on.fnorm.last().unwrap(),
+        off.stop
+    );
+    assert!(matches!(on.stop, Stop::Floor { .. }) && *on.fnorm.last().unwrap() <= 1e-29);
+    assert!(!matches!(off.stop, Stop::Floor { .. }), "control did not fire");
+}
+
 /// The floor rule waits for a small step: pass, from 10 times the root (steps that cut max |F| by about 4, with max
 /// |dz| of order 1) the run still reaches the floor, max |F| <= 1e-29 and max |z - z*| <= 1e-30, with either damping.
 #[test]

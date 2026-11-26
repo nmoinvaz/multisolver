@@ -71,8 +71,10 @@ pub struct NewtonOpts {
     /// factor, or that the damping refuses, ends the run unconverged at the precision's floor ([`Stop::Floor`]). 10 is
     /// the usual factor, and 0 (the default) turns the rule off. Only a step with factors formed at its own iterate
     /// stops the run. A chord step that gains this little has its factors formed anew instead
-    /// ([`crate::ladder`]). The rule assumes Newton's quadratic rate: factors whose linear contraction is above
-    /// 1 / floor_cut (f64 factors of a Jacobian of condition above about 10^14) end the run early.
+    /// ([`newton_chord`], [`crate::ladder`]). [`newton_with`] takes every factorization it is given as formed at the
+    /// step's iterate, so give it reused factors ([`reuse`]) only with the rule off. The rule assumes Newton's
+    /// quadratic rate: factors whose linear contraction is above 1 / floor_cut (f64 factors of a Jacobian of
+    /// condition above about 10^14) end the run early.
     pub floor_cut: f64,
     /// the floor rule's bound on the step, max |dz| over the unknowns (absolute, from the hi parts): a larger step is
     /// far from the solution, where a small cut is the damping's, not the floor's (default 1e-12)
@@ -459,7 +461,8 @@ pub fn newton<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
 /// Newton's method with the exact Jacobian formed and factored only every `every` steps and reused in between
 /// ([`reuse`]): Shamanskii's method, the chord method for `every` >= `opts.max_iter`, and `newton` bit for bit for
 /// `every` = 1. Damped by `opts.damping` as `newton`, the correction rule's simplified corrections solved with the
-/// step's factors.
+/// step's factors. With the floor rule on, a reused factorization that gains too little is formed anew at the next
+/// step rather than ending the run.
 pub fn newton_chord<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
     pr: &Pr,
     z: &mut Vec<Vec<f64>>,
@@ -469,7 +472,43 @@ pub fn newton_chord<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
     if every == 0 {
         return Err("newton_chord: every must be at least 1".into());
     }
-    newton_with::<P, Pr, _>(pr, z, opts, reuse(every, |z| exact::<P, Pr>(pr, z, opts.par)))
+    check_opts(opts)?;
+    let mut src = Chord {
+        every,
+        factor: |z: &[&[f64]]| exact::<P, Pr>(pr, z, opts.par),
+        last: None,
+        stale: false,
+    };
+    damped::<P, Pr, Rc<Exact<P>>>(pr, z, opts, &mut src)
+}
+
+/// The factors of [`newton_chord`]: those of `reuse`, formed at the first step and every `every` steps, and at once
+/// when the floor rule finds them stale; fresh only when formed at the step's iterate
+struct Chord<G, F> {
+    every: usize,
+    factor: G,
+    last: Option<(usize, Rc<F>)>,
+    stale: bool,
+}
+
+impl<P: Precision<Native>, F: Factored<P>, G: Fn(&[&[f64]]) -> Result<F, String>> Source<P, Rc<F>> for Chord<G, F> {
+    fn get(&mut self, z: &[&[f64]]) -> Result<(Rc<F>, bool), String> {
+        if !self.stale {
+            if let Some((uses, f)) = self.last.as_mut() {
+                if *uses < self.every {
+                    *uses += 1;
+                    return Ok((f.clone(), false));
+                }
+            }
+        }
+        let f = Rc::new((self.factor)(z)?);
+        self.last = Some((1, f.clone()));
+        self.stale = false;
+        Ok((f, true))
+    }
+    fn stale(&mut self) {
+        self.stale = true;
+    }
 }
 
 /// Newton's method, damped as `newton`, with the exact Jacobian rounded by `to` and factored in double-double or f64
@@ -529,7 +568,7 @@ pub(crate) fn damped<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
 
 /// The floor rule's test of a full step that took max |F| from f0 to f1 with corrections dz: (cut, max |dz|) when
 /// the rule is on, f1 is finite and above `tol`, and the cut f0 / f1 is below `floor_cut`
-fn slow<P: Precision<Native>>(opts: &NewtonOpts, f0: f64, f1: f64, dz: &[P::Scalar]) -> Option<(f64, f64)> {
+pub(crate) fn slow<P: Precision<Native>>(opts: &NewtonOpts, f0: f64, f1: f64, dz: &[P::Scalar]) -> Option<(f64, f64)> {
     let cut = f0 / f1;
     // a NaN cut gains too little
     let small = matches!(cut.partial_cmp(&opts.floor_cut), Some(std::cmp::Ordering::Less) | None);

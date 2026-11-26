@@ -28,7 +28,8 @@
 //! problem do not depend on the units of its unknowns.
 use crate::gcr::recip;
 use crate::newton::{
-    axpy, check_opts, correction_step, weights, wnorm, Damping, Factored, NewtonOpts, NewtonReport, Prev, Stop, Trial,
+    axpy, check_opts, correction_step, slow, weights, wnorm, Damping, Factored, NewtonOpts, NewtonReport, Prev, Stop,
+    Trial,
 };
 use crate::prec::{max_abs, parts};
 use crate::Problem;
@@ -200,6 +201,17 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
             rep.converged = true;
             rep.stop = Stop::TolDz;
             return Ok((rep, info));
+        }
+        // the floor rule on a full step with factors formed at its iterate, as `newton_correction` applies it
+        if t.lam == 1.0 {
+            let fnew = max_abs::<P>(&f);
+            if let Some((cut, dz)) = slow::<P>(opts, fmax, fnew, &t.dz) {
+                if dz <= opts.floor_dz {
+                    rep.fnorm.push(fnew);
+                    rep.stop = Stop::Floor { cut, dz };
+                    return Ok((rep, info));
+                }
+            }
         }
         let r: Option<Vec<P::Scalar>> = w
             .as_ref()
