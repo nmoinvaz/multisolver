@@ -67,6 +67,16 @@ pub struct NewtonOpts {
     /// with the correction rule, also stop after a full step whose simplified correction has a norm at most this (0:
     /// off); unlike max |F| it does not depend on the rows' scaling, and with `Scaling::Iterates` it is relative
     pub tol_dz: f64,
+    /// The floor rule: a full step (lambda 1) of max |dz| at most `floor_dz` that cuts max |F| by less than this
+    /// factor, or that the damping refuses, ends the run unconverged at the precision's floor ([`Stop::Floor`]). 10 is
+    /// the usual factor, and 0 (the default) turns the rule off. Only a step with factors formed at its own iterate
+    /// stops the run; a chord step that gains this little has its factors formed anew by the loops that know it is
+    /// one. The rule assumes Newton's quadratic rate: factors whose linear contraction is above
+    /// 1 / floor_cut (f64 factors of a Jacobian of condition above about 10^14) end the run early.
+    pub floor_cut: f64,
+    /// the floor rule's bound on the step, max |dz| over the unknowns (absolute, from the hi parts): a larger step is
+    /// far from the solution, where a small cut is the damping's, not the floor's (default 1e-12)
+    pub floor_dz: f64,
     /// Newton steps at most
     pub max_iter: usize,
     /// the correction rule's smallest lambda is 2^-max_halvings, below which it stops, not converged; the residual
@@ -85,6 +95,8 @@ impl Default for NewtonOpts {
         NewtonOpts {
             tol: 1e-28,
             tol_dz: 0.0,
+            floor_cut: 0.0,
+            floor_dz: 1e-12,
             max_iter: 20,
             max_halvings: 10,
             lambda0: 1.0,
@@ -95,9 +107,29 @@ impl Default for NewtonOpts {
     }
 }
 
+/// Why a damped loop stopped
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Stop {
+    /// max |F| at most `tol`
+    Tol,
+    /// a full step's simplified correction at most `tol_dz`
+    TolDz,
+    /// The floor rule ([`NewtonOpts::floor_cut`]): a full step of max |dz| = `dz` cut max |F| by only `cut`. The step
+    /// was taken when it lowered max |F| (cut > 1) and left out when the damping refused it. Max |F| at the end, the
+    /// last of [`NewtonReport::fnorm`], is the floor reached, and [`NewtonReport::error_estimate`] the error there.
+    Floor { cut: f64, dz: f64 },
+    /// the correction rule found no acceptable lambda above 2^-max_halvings
+    Refused,
+    /// a residual that is not finite
+    NotFinite,
+    /// `max_iter` steps without another stop
+    MaxIter,
+}
+
 /// What [`newton`] did: max |F| before each step and at the end, each step's lambda, the correction rule's
 /// contraction theta = |dz_bar| / |dz| and simplified correction |dz_bar| = |J(z_k)^-1 F(z_(k+1))| (in the norm of
-/// [`NewtonOpts::scaling`]) for each step taken (both empty with the residual rule), and whether it converged.
+/// [`NewtonOpts::scaling`]) for each step taken (both empty with the residual rule), whether it converged, and why it
+/// stopped.
 #[derive(Clone, Debug)]
 pub struct NewtonReport {
     pub fnorm: Vec<f64>,
@@ -105,6 +137,7 @@ pub struct NewtonReport {
     pub theta: Vec<f64>,
     pub dz_bar: Vec<f64>,
     pub converged: bool,
+    pub stop: Stop,
 }
 
 impl NewtonReport {
@@ -126,6 +159,7 @@ impl NewtonReport {
             theta: Vec::new(),
             dz_bar: Vec::new(),
             converged: false,
+            stop: Stop::MaxIter,
         }
     }
 }
@@ -196,6 +230,14 @@ pub(crate) fn check_opts(opts: &NewtonOpts) -> Result<(), String> {
         return Err(format!(
             "newton: max_halvings {} is beyond f64's range (at most 1074)",
             opts.max_halvings
+        ));
+    }
+    // NaN fails each comparison
+    let floor_ok = opts.floor_cut.is_finite() && opts.floor_cut >= 0.0 && opts.floor_dz >= 0.0;
+    if !floor_ok {
+        return Err(format!(
+            "newton: floor_cut must be finite and floor_dz non-negative, not {} and {}",
+            opts.floor_cut, opts.floor_dz
         ));
     }
     if let Scaling::Iterates { floor } = opts.scaling {
@@ -412,10 +454,47 @@ pub fn newton_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
     factor: impl Fn(&[&[f64]]) -> Result<F, String>,
 ) -> Result<NewtonReport, String> {
     check_opts(opts)?;
-    match opts.damping {
-        Damping::Correction => newton_correction::<P, Pr, F>(pr, z, opts, factor),
-        Damping::Residual => newton_residual::<P, Pr, F>(pr, z, opts, factor),
+    damped::<P, Pr, F>(pr, z, opts, &mut Fresh(factor))
+}
+
+/// The factors a damped loop takes at each step, and whether they were formed at the step's iterate (fresh)
+pub(crate) trait Source<P: Precision<Native>, F: Factored<P>> {
+    /// the factors for the step at z
+    fn get(&mut self, z: &[&[f64]]) -> Result<(F, bool), String>;
+    /// the factors in hand gained too little: the next `get` forms new ones
+    fn stale(&mut self);
+}
+
+/// factors formed at every step's iterate
+struct Fresh<G>(G);
+
+impl<P: Precision<Native>, F: Factored<P>, G: Fn(&[&[f64]]) -> Result<F, String>> Source<P, F> for Fresh<G> {
+    fn get(&mut self, z: &[&[f64]]) -> Result<(F, bool), String> {
+        Ok(((self.0)(z)?, true))
     }
+    fn stale(&mut self) {}
+}
+
+/// The damped loop of `opts.damping` with the factors of `src`
+pub(crate) fn damped<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
+    pr: &Pr,
+    z: &mut Vec<Vec<f64>>,
+    opts: &NewtonOpts,
+    src: &mut impl Source<P, F>,
+) -> Result<NewtonReport, String> {
+    match opts.damping {
+        Damping::Correction => newton_correction::<P, Pr, F>(pr, z, opts, src),
+        Damping::Residual => newton_residual::<P, Pr, F>(pr, z, opts, src),
+    }
+}
+
+/// The floor rule's test of a full step that took max |F| from f0 to f1 with corrections dz: (cut, max |dz|) when
+/// the rule is on, f1 is finite and above `tol`, and the cut f0 / f1 is below `floor_cut`
+fn slow<P: Precision<Native>>(opts: &NewtonOpts, f0: f64, f1: f64, dz: &[P::Scalar]) -> Option<(f64, f64)> {
+    let cut = f0 / f1;
+    // a NaN cut gains too little
+    let small = matches!(cut.partial_cmp(&opts.floor_cut), Some(std::cmp::Ordering::Less) | None);
+    (opts.floor_cut > 0.0 && f1.is_finite() && f1 > opts.tol && small).then(|| (cut, max_abs::<P>(dz)))
 }
 
 /// The error-oriented global Newton method (Deuflhard 2004, section 3.3.3): the prediction `lambda = min(1,
@@ -423,11 +502,16 @@ pub fn newton_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
 /// |dz_bar - (1 - lambda) dz|)`, a trial accepted when `theta < 1 - lambda / 4` and otherwise retried at
 /// `min(mu, lambda / 2)`, and one retry per step at `min(1, mu)` when that is 4 lambda or more, all norms those of
 /// `opts.scaling` at the step.
+///
+/// The floor rule ([`NewtonOpts::floor_cut`]) ends the loop at a full step that gains too little, or that the test
+/// refuses when its max |dz| is at most `floor_dz` (no halvings follow then). With factors not formed at the step's
+/// iterate it marks them stale instead, so that the next step forms new ones. A refused step with such factors is
+/// left out and retried from the same iterate.
 fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &mut Vec<Vec<f64>>,
     opts: &NewtonOpts,
-    factor: impl Fn(&[&[f64]]) -> Result<F, String>,
+    src: &mut impl Source<P, F>,
 ) -> Result<NewtonReport, String> {
     let mut rep = NewtonReport::new();
     let mut f = pr.residual(&parts(z), opts.par)?;
@@ -438,17 +522,35 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
         let fmax = max_abs::<P>(&f);
         rep.fnorm.push(fmax);
         if !fmax.is_finite() {
+            rep.stop = Stop::NotFinite;
             return Ok(rep);
         }
         if fmax <= opts.tol {
             rep.converged = true;
+            rep.stop = Stop::Tol;
             return Ok(rep);
         }
-        let lu = factor(&parts(z))?;
+        let (lu, fresh) = src.get(&parts(z))?;
         let w = weights(opts.scaling, &parts(z), &parts(&zp));
-        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? else {
-            rep.fnorm.push(fmax);
-            return Ok(rep);
+        let t = match correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? {
+            Trial::Taken(t) => t,
+            Trial::Refused | Trial::Floor { .. } if !fresh => {
+                // old factors: the step again from z with new ones (one entry of fnorm per step taken)
+                src.stale();
+                rep.fnorm.pop();
+                prev = None;
+                continue;
+            }
+            Trial::Refused => {
+                rep.fnorm.push(fmax);
+                rep.stop = Stop::Refused;
+                return Ok(rep);
+            }
+            Trial::Floor { f: ft, dz } => {
+                rep.fnorm.push(fmax);
+                rep.stop = Stop::Floor { cut: fmax / ft, dz };
+                return Ok(rep);
+            }
         };
         rep.scale.push(t.lam);
         rep.theta.push(t.theta);
@@ -458,13 +560,31 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
         if opts.tol_dz > 0.0 && t.lam == 1.0 && t.nbar <= opts.tol_dz {
             rep.fnorm.push(max_abs::<P>(&f));
             rep.converged = true;
+            rep.stop = Stop::TolDz;
             return Ok(rep);
+        }
+        if t.lam == 1.0 {
+            let fnew = max_abs::<P>(&f);
+            match slow::<P>(opts, fmax, fnew, &t.dz) {
+                Some(_) if !fresh => {
+                    src.stale();
+                    prev = None;
+                    continue;
+                }
+                Some((cut, dz)) if dz <= opts.floor_dz => {
+                    rep.fnorm.push(fnew);
+                    rep.stop = Stop::Floor { cut, dz };
+                    return Ok(rep);
+                }
+                _ => {}
+            }
         }
         prev = Some((t.dz, t.bar, t.lam));
     }
     let fmax = max_abs::<P>(&f);
     rep.fnorm.push(fmax);
     rep.converged = fmax <= opts.tol;
+    rep.stop = if rep.converged { Stop::Tol } else { Stop::MaxIter };
     Ok(rep)
 }
 
@@ -480,6 +600,18 @@ pub(crate) struct Taken<P: Precision<Native>> {
     pub theta: f64,
 }
 
+/// The outcome of one step of the correction rule
+pub(crate) enum Trial<P: Precision<Native>> {
+    Taken(Taken<P>),
+    /// no lambda above 2^-max_halvings passed the test
+    Refused,
+    /// the full step refused at the floor rule's max |dz| = dz, the trial's max |F| f (`NewtonOpts::floor_cut`)
+    Floor {
+        f: f64,
+        dz: f64,
+    },
+}
+
 /// dz, dz_bar and lambda of the last step taken, from which the correction rule predicts the next lambda
 pub(crate) type Prev<P> = Option<(
     Vec<<P as Precision<Native>>::Scalar>,
@@ -488,8 +620,10 @@ pub(crate) type Prev<P> = Option<(
 )>;
 
 /// One step of the correction rule from z, where the residual is f and `lu` the factors: the trials of
-/// `newton_correction`'s documentation until one is accepted, or None once lambda falls below 2^-max_halvings; the
-/// norms are `wnorm`'s with the weights w (the last step's corrections among them, as NLEQ-ERR rescales them)
+/// `newton_correction`'s documentation until one is accepted, `Trial::Refused` once lambda falls below
+/// 2^-max_halvings, and `Trial::Floor` at once when the floor rule is on, the first trial is the full step, it is
+/// refused, and max |dz| is at most `floor_dz`; the norms are `wnorm`'s with the weights w (the last step's
+/// corrections among them, as NLEQ-ERR rescales them)
 pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &[&[f64]],
@@ -498,7 +632,7 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
     prev: &Prev<P>,
     w: Option<&[f64]>,
     opts: &NewtonOpts,
-) -> Result<Option<Taken<P>>, String> {
+) -> Result<Trial<P>, String> {
     let lam_min = 0.5f64.powi(opts.max_halvings as i32);
     let dz = lu.try_solve_neg(f)?;
     let ndz = wnorm::<P>(&dz, w);
@@ -516,9 +650,10 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
         }
     };
     let mut raised = false;
+    let mut first = true;
     loop {
         if lam.is_nan() || lam < lam_min || lam == 0.0 {
-            return Ok(None);
+            return Ok(Trial::Refused);
         }
         let zt = axpy::<P>(z, &dz, lam);
         let ft = pr.residual(&parts(&zt), opts.par)?;
@@ -529,6 +664,16 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
         let d: Vec<P::Scalar> = bar.iter().zip(&dz).map(|(&b, &d)| b - d * rest).collect();
         let mu = 0.5 * ndz * lam * lam / wnorm::<P>(&d, w);
         if theta.is_nan() || theta >= 1.0 - lam / 4.0 {
+            if first && lam == 1.0 && opts.floor_cut > 0.0 {
+                let dzmax = max_abs::<P>(&dz);
+                if dzmax <= opts.floor_dz {
+                    return Ok(Trial::Floor {
+                        f: max_abs::<P>(&ft),
+                        dz: dzmax,
+                    });
+                }
+            }
+            first = false;
             lam = mu.min(lam / 2.0);
             continue;
         }
@@ -538,7 +683,7 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
             lam = lam_new;
             continue;
         }
-        return Ok(Some(Taken {
+        return Ok(Trial::Taken(Taken {
             lam,
             dz,
             zt,
@@ -551,26 +696,37 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
 }
 
 /// The residual rule: steps halved while max |F| does not fall, at most `max_halvings` times, then taken.
+///
+/// The floor rule ([`NewtonOpts::floor_cut`]) ends the loop at a full step of max |dz| at most `floor_dz` that gains
+/// too little, taken when it lowered max |F|. When it did not, the step is left out and no halvings follow. With factors
+/// not formed at the step's iterate the rule marks them stale instead, so the next step forms new ones, and a full
+/// step they leave without a fall is left out without halvings.
 fn newton_residual<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &mut Vec<Vec<f64>>,
     opts: &NewtonOpts,
-    factor: impl Fn(&[&[f64]]) -> Result<F, String>,
+    src: &mut impl Source<P, F>,
 ) -> Result<NewtonReport, String> {
     let mut rep = NewtonReport::new();
     // the residual at z, kept from the trial that reached z
     let mut f = pr.residual(&parts(z), opts.par)?;
     let mut fn0 = max_abs::<P>(&f);
+    let floor_on = opts.floor_cut > 0.0;
     for _ in 0..opts.max_iter {
         rep.fnorm.push(fn0);
         if !fn0.is_finite() {
+            rep.stop = Stop::NotFinite;
             return Ok(rep);
         }
         if fn0 <= opts.tol {
             rep.converged = true;
+            rep.stop = Stop::Tol;
             return Ok(rep);
         }
-        let dz = factor(&parts(z))?.try_solve_neg(&f)?;
+        let (lu, fresh) = src.get(&parts(z))?;
+        let dz = lu.try_solve_neg(&f)?;
+        // the floor rule looks at the full step alone, with no halvings, for old factors or a small step
+        let full_only = floor_on && (!fresh || max_abs::<P>(&dz) <= opts.floor_dz);
         let mut s = 1.0;
         let (mut zn, mut ft, mut fnn);
         let mut h = 0;
@@ -578,7 +734,7 @@ fn newton_residual<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
             zn = axpy::<P>(&parts(z), &dz, s);
             ft = pr.residual(&parts(&zn), opts.par)?;
             fnn = max_abs::<P>(&ft);
-            if fnn < fn0 || h == opts.max_halvings {
+            if fnn < fn0 || h == opts.max_halvings || full_only {
                 break;
             }
             s *= 0.5;
@@ -586,7 +742,39 @@ fn newton_residual<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
         }
         if !fnn.is_finite() {
             rep.fnorm.push(fnn);
+            rep.stop = Stop::NotFinite;
             return Ok(rep);
+        }
+        let fell = fnn < fn0;
+        let floor = if s == 1.0 {
+            if fell {
+                slow::<P>(opts, fn0, fnn, &dz)
+            } else {
+                (floor_on && fnn > opts.tol).then(|| (fn0 / fnn, max_abs::<P>(&dz)))
+            }
+        } else {
+            None
+        };
+        if let Some((cut, dzmax)) = floor {
+            if !fresh || dzmax <= opts.floor_dz {
+                if fell {
+                    rep.scale.push(s);
+                    *z = zn;
+                    f = ft;
+                    fn0 = fnn;
+                }
+                if !fresh {
+                    // old factors: the next step forms new ones (one entry of fnorm per step taken)
+                    src.stale();
+                    if !fell {
+                        rep.fnorm.pop();
+                    }
+                    continue;
+                }
+                rep.fnorm.push(fn0);
+                rep.stop = Stop::Floor { cut, dz: dzmax };
+                return Ok(rep);
+            }
         }
         rep.scale.push(s);
         *z = zn;
@@ -595,6 +783,7 @@ fn newton_residual<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
     }
     rep.fnorm.push(fn0);
     rep.converged = fn0 <= opts.tol;
+    rep.stop = if rep.converged { Stop::Tol } else { Stop::MaxIter };
     Ok(rep)
 }
 

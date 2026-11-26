@@ -28,7 +28,7 @@
 //! problem do not depend on the units of its unknowns.
 use crate::gcr::recip;
 use crate::newton::{
-    axpy, check_opts, correction_step, weights, wnorm, Damping, Factored, NewtonOpts, NewtonReport, Prev,
+    axpy, check_opts, correction_step, weights, wnorm, Damping, Factored, NewtonOpts, NewtonReport, Prev, Stop, Trial,
 };
 use crate::prec::{max_abs, parts};
 use crate::Problem;
@@ -124,10 +124,12 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
         let fmax = max_abs::<P>(&f);
         rep.fnorm.push(fmax);
         if !fmax.is_finite() {
+            rep.stop = Stop::NotFinite;
             return Ok((rep, info));
         }
         if fmax <= opts.tol {
             rep.converged = true;
+            rep.stop = Stop::Tol;
             return Ok((rep, info));
         }
         if let Some(u) = up.as_mut() {
@@ -160,6 +162,7 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
                 if opts.tol_dz > 0.0 && nv <= opts.tol_dz {
                     rep.fnorm.push(max_abs::<P>(&f));
                     rep.converged = true;
+                    rep.stop = Stop::TolDz;
                     return Ok((rep, info));
                 }
                 if u.s.len() > qopts.max_updates || !finite::<P>(u.inv[k + 1]) {
@@ -174,9 +177,18 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
         let lu = factor(&parts(z))?;
         info.factorizations += 1;
         let w = weights(opts.scaling, &parts(z), &parts(&zp));
-        let Some(t) = correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? else {
-            rep.fnorm.push(fmax);
-            return Ok((rep, info));
+        let t = match correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? {
+            Trial::Taken(t) => t,
+            Trial::Refused => {
+                rep.fnorm.push(fmax);
+                rep.stop = Stop::Refused;
+                return Ok((rep, info));
+            }
+            Trial::Floor { f: ft, dz } => {
+                rep.fnorm.push(fmax);
+                rep.stop = Stop::Floor { cut: fmax / ft, dz };
+                return Ok((rep, info));
+            }
         };
         rep.scale.push(t.lam);
         rep.theta.push(t.theta);
@@ -186,6 +198,7 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
         if opts.tol_dz > 0.0 && t.lam == 1.0 && t.nbar <= opts.tol_dz {
             rep.fnorm.push(max_abs::<P>(&f));
             rep.converged = true;
+            rep.stop = Stop::TolDz;
             return Ok((rep, info));
         }
         let r: Option<Vec<P::Scalar>> = w
@@ -209,5 +222,6 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
     let fmax = max_abs::<P>(&f);
     rep.fnorm.push(fmax);
     rep.converged = fmax <= opts.tol;
+    rep.stop = if rep.converged { Stop::Tol } else { Stop::MaxIter };
     Ok((rep, info))
 }
