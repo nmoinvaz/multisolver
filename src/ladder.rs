@@ -244,9 +244,9 @@ where
             formed: 0,
         };
         let rep = match st.res {
-            Prec::Double => damped::<Double, Pr, Rc<Lu>>(pr, z, &o, &mut src)?,
-            Prec::Quad => damped::<Quad, Pr, Rc<Lu>>(pr, z, &o, &mut src)?,
-            Prec::Octo => damped::<Octo, Pr, Rc<Lu>>(pr, z, &o, &mut src)?,
+            Prec::Double => damped::<Double, Pr, Rc<Lu>>(pr, z, &o, &mut src, None)?,
+            Prec::Quad => damped::<Quad, Pr, Rc<Lu>>(pr, z, &o, &mut src, None)?,
+            Prec::Octo => damped::<Octo, Pr, Rc<Lu>>(pr, z, &o, &mut src, None)?,
         };
         out.jacobians += src.formed;
         let (done, stop) = (rep.converged, rep.stop);

@@ -479,7 +479,7 @@ pub fn newton_chord<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
         last: None,
         stale: false,
     };
-    damped::<P, Pr, Rc<Exact<P>>>(pr, z, opts, &mut src)
+    damped::<P, Pr, Rc<Exact<P>>>(pr, z, opts, &mut src, None)
 }
 
 /// The factors of [`newton_chord`]: those of `reuse`, formed at the first step and every `every` steps, and at once
@@ -532,7 +532,42 @@ pub fn newton_with<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
     factor: impl Fn(&[&[f64]]) -> Result<F, String>,
 ) -> Result<NewtonReport, String> {
     check_opts(opts)?;
-    damped::<P, Pr, F>(pr, z, opts, &mut Fresh(factor))
+    damped::<P, Pr, F>(pr, z, opts, &mut Fresh(factor), None)
+}
+
+/// A projection of the state onto a manifold the caller solves itself (P::PARTS part arrays, changed in place), such
+/// as an end's data put back on the equations it must meet
+pub type Project<'a> = &'a dyn Fn(&mut Vec<Vec<f64>>) -> Result<(), String>;
+
+/// `newton_with` with the projection `project` applied to the start and to every trial (and so to every iterate)
+/// before its residual. A trial's simplified correction includes the projection's displacement, the vector from the
+/// trial to the next simplified iterate, so that the correction rule's test sees a projection that moves the point
+/// away from the root. The identity gives `newton_with`'s steps, bit for bit. A projection may move a point only above
+/// a switch of its own (it sees the point, not its residual), as hp's ElimO projects only above its max |F| switch.
+pub fn newton_with_projection<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
+    pr: &Pr,
+    z: &mut Vec<Vec<f64>>,
+    opts: &NewtonOpts,
+    factor: impl Fn(&[&[f64]]) -> Result<F, String>,
+    project: impl Fn(&mut Vec<Vec<f64>>) -> Result<(), String>,
+) -> Result<NewtonReport, String> {
+    check_opts(opts)?;
+    damped::<P, Pr, F>(pr, z, opts, &mut Fresh(factor), Some(&project))
+}
+
+/// b - a as scalars of P, a and b part arrays
+fn displacement<P: Precision<Native>>(b: &[Vec<f64>], a: &[Vec<f64>]) -> Vec<P::Scalar> {
+    let mut x = vec![0.0; P::PARTS];
+    let mut y = vec![0.0; P::PARTS];
+    (0..a[0].len())
+        .map(|i| {
+            for q in 0..P::PARTS {
+                x[q] = b[q][i];
+                y[q] = a[q][i];
+            }
+            P::from_raw(&x) - P::from_raw(&y)
+        })
+        .collect()
 }
 
 /// The factors a damped loop takes at each step, and whether they were formed at the step's iterate (fresh)
@@ -553,16 +588,20 @@ impl<P: Precision<Native>, F: Factored<P>, G: Fn(&[&[f64]]) -> Result<F, String>
     fn stale(&mut self) {}
 }
 
-/// The damped loop of `opts.damping` with the factors of `src`
+/// The damped loop of `opts.damping` with the factors of `src` and the projection `proj`
 pub(crate) fn damped<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &mut Vec<Vec<f64>>,
     opts: &NewtonOpts,
     src: &mut impl Source<P, F>,
+    proj: Option<Project>,
 ) -> Result<NewtonReport, String> {
+    if let Some(p) = proj {
+        p(z)?;
+    }
     match opts.damping {
-        Damping::Correction => newton_correction::<P, Pr, F>(pr, z, opts, src),
-        Damping::Residual => newton_residual::<P, Pr, F>(pr, z, opts, src),
+        Damping::Correction => newton_correction::<P, Pr, F>(pr, z, opts, src, proj),
+        Damping::Residual => newton_residual::<P, Pr, F>(pr, z, opts, src, proj),
     }
 }
 
@@ -590,6 +629,7 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
     z: &mut Vec<Vec<f64>>,
     opts: &NewtonOpts,
     src: &mut impl Source<P, F>,
+    proj: Option<Project>,
 ) -> Result<NewtonReport, String> {
     let mut rep = NewtonReport::new();
     let mut f = pr.residual(&parts(z), opts.par)?;
@@ -610,7 +650,7 @@ fn newton_correction<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<
         }
         let (lu, fresh) = src.get(&parts(z))?;
         let w = weights(opts.scaling, &parts(z), &parts(&zp));
-        let t = match correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? {
+        let t = match correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts, proj)? {
             Trial::Taken(t) => t,
             Trial::Refused | Trial::Floor { .. } if !fresh => {
                 // old factors: the step again from z with new ones (one entry of fnorm per step taken)
@@ -702,6 +742,7 @@ pub(crate) type Prev<P> = Option<(
 /// 2^-max_halvings, and `Trial::Floor` at once when the floor rule is on, the first trial is the full step, it is
 /// refused, and max |dz| is at most `floor_dz`; the norms are `wnorm`'s with the weights w (the last step's
 /// corrections among them, as NLEQ-ERR rescales them)
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>>(
     pr: &Pr,
     z: &[&[f64]],
@@ -710,6 +751,7 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
     prev: &Prev<P>,
     w: Option<&[f64]>,
     opts: &NewtonOpts,
+    proj: Option<Project>,
 ) -> Result<Trial<P>, String> {
     let lam_min = 0.5f64.powi(opts.max_halvings as i32);
     let dz = lu.try_solve_neg(f)?;
@@ -733,9 +775,21 @@ pub(crate) fn correction_step<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: 
         if lam.is_nan() || lam < lam_min || lam == 0.0 {
             return Ok(Trial::Refused);
         }
-        let zt = axpy::<P>(z, &dz, lam);
+        let mut zt = axpy::<P>(z, &dz, lam);
+        // the projection's displacement, counted in the simplified correction
+        let disp = match proj {
+            Some(p) => {
+                let before = zt.clone();
+                p(&mut zt)?;
+                Some(displacement::<P>(&zt, &before))
+            }
+            None => None,
+        };
         let ft = pr.residual(&parts(&zt), opts.par)?;
-        let bar = lu.try_solve_neg(&ft)?;
+        let mut bar = lu.try_solve_neg(&ft)?;
+        if let Some(d) = disp {
+            bar.iter_mut().zip(d).for_each(|(b, d)| *b = *b + d);
+        }
         let nbar = wnorm::<P>(&bar, w);
         let theta = nbar / ndz;
         let rest = P::from_dd(DD::from_f64(1.0 - lam));
@@ -784,6 +838,7 @@ fn newton_residual<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
     z: &mut Vec<Vec<f64>>,
     opts: &NewtonOpts,
     src: &mut impl Source<P, F>,
+    proj: Option<Project>,
 ) -> Result<NewtonReport, String> {
     let mut rep = NewtonReport::new();
     // the residual at z, kept from the trial that reached z
@@ -810,6 +865,9 @@ fn newton_residual<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P>
         let mut h = 0;
         loop {
             zn = axpy::<P>(&parts(z), &dz, s);
+            if let Some(p) = proj {
+                p(&mut zn)?;
+            }
             ft = pr.residual(&parts(&zn), opts.par)?;
             fnn = max_abs::<P>(&ft);
             if fnn < fn0 || h == opts.max_halvings || full_only {
