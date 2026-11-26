@@ -12,6 +12,11 @@
 //! The approximants, their poles and their zeros are formed in the precision P, the roots by the Aberth-Ehrlich
 //! iteration (Ehrlich, Commun. ACM 10 (1967) 107; Aberth, Math. Comp. 27 (1973) 339). A pole with a zero next to it
 //! to P's rounding is a doublet, the approximant's excess degrees, which a genuine pole of small residue is not.
+//!
+//! The type of a real singularity, f ~ A (1 - h/s)^mu, comes from its exponent: a square-root point (mu = 1/2, a fold
+//! of the real branch) or a pole (mu = -1), by the ratio method with a second correction ([`ratio_exponent`]) and by
+//! Dlog Pade approximants ([`dlog_exponent`]). A quadratic Pade approximant ([`Shafer`]) continues a branch through a
+//! square-root point onto its mirror sheet.
 use crate::anm::Branch;
 use crate::gcr::recip;
 use crate::prec::nan_max;
@@ -488,6 +493,341 @@ pub fn recurrence(c: &[f64], from: usize, w: usize) -> Recurrence {
 /// c_1..c_N of unknown i of a branch's series: the scalar series the estimators read
 pub fn component<P: Precision<Native>>(br: &Branch<P>, i: usize) -> Vec<P::Scalar> {
     br.z[1..].iter().map(|zk| zk[i]).collect()
+}
+
+/// A singularity's place s and exponent mu, f ~ A (1 - h/s)^mu (mu = 1/2 a square-root point, a fold of the real
+/// branch; mu = -1 a simple pole): the medians over an estimator's windows or approximants, their ranges (spreads
+/// over the estimator's choices, not error bars), and how many entered
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Exponent {
+    pub s: f64,
+    pub mu: f64,
+    pub s_spread: f64,
+    pub mu_spread: f64,
+    pub n: usize,
+}
+
+/// the median and the range of the values (not empty)
+fn median_range(mut v: Vec<f64>) -> (f64, f64) {
+    v.sort_by(f64::total_cmp);
+    let n = v.len();
+    let med = if n % 2 == 1 {
+        v[n / 2]
+    } else {
+        0.5 * (v[n / 2 - 1] + v[n / 2])
+    };
+    (med, v[n - 1] - v[0])
+}
+
+/// the exponent from the estimates (s, mu), None when there are none
+fn exponent_of(est: Vec<(f64, f64)>) -> Option<Exponent> {
+    if est.is_empty() {
+        return None;
+    }
+    let n = est.len();
+    let (s, s_spread) = median_range(est.iter().map(|e| e.0).collect());
+    let (mu, mu_spread) = median_range(est.iter().map(|e| e.1).collect());
+    Some(Exponent {
+        s,
+        mu,
+        s_spread,
+        mu_spread,
+        n,
+    })
+}
+
+/// The ratio method with a second correction: for f ~ A (1 - h/s)^mu alone, c_k / c_(k-1) = (1/s)(1 - (1 + mu)/k)
+/// exactly, and the ratios over the orders k0..N are fitted by least squares as (1/s)(1 + b/k + e/k^2), so that
+/// mu = -1 - b, for each first order k0 in `k0s` (C. Domb and M. F. Sykes, Proc. R. Soc. Lond. A 240 (1957) 214,
+/// doi:10.1098/rspa.1957.0078). c = c_1..c_N; None without a window of four ratios.
+pub fn ratio_exponent(c: &[f64], k0s: impl IntoIterator<Item = usize>) -> Option<Exponent> {
+    let n = c.len();
+    let mut est = Vec::new();
+    for k0 in k0s {
+        let ks: Vec<usize> = (k0.max(2)..=n).filter(|&k| c[k - 2] != 0.0).collect();
+        if ks.len() < 4 {
+            continue;
+        }
+        // the normal equations of the fit y = a0 + a1 / k + a2 / k^2
+        let mut ata = [[0.0f64; 3]; 3];
+        let mut aty = [0.0f64; 3];
+        for &k in &ks {
+            let x = [1.0, 1.0 / k as f64, 1.0 / (k * k) as f64];
+            let y = c[k - 1] / c[k - 2];
+            for i in 0..3 {
+                aty[i] += x[i] * y;
+                for j in 0..3 {
+                    ata[i][j] += x[i] * x[j];
+                }
+            }
+        }
+        let Some(a) = solve3(ata, aty) else { continue };
+        if a[0] == 0.0 || !a[0].is_finite() {
+            continue;
+        }
+        est.push((1.0 / a[0], -1.0 - a[1] / a[0]));
+    }
+    exponent_of(est)
+}
+
+/// the solution of the 3 x 3 system by Gaussian elimination with partial pivoting, None when it is singular
+fn solve3(mut a: [[f64; 3]; 3], mut b: [f64; 3]) -> Option<[f64; 3]> {
+    for c in 0..3 {
+        let p = (c..3).max_by(|&x, &y| a[x][c].abs().total_cmp(&a[y][c].abs()))?;
+        if a[p][c] == 0.0 {
+            return None;
+        }
+        a.swap(c, p);
+        b.swap(c, p);
+        for r in c + 1..3 {
+            let f = a[r][c] / a[c][c];
+            let rc = a[c];
+            for (x, y) in a[r].iter_mut().zip(rc).skip(c) {
+                *x -= f * y;
+            }
+            b[r] -= f * b[c];
+        }
+    }
+    let mut x = [0.0; 3];
+    for c in (0..3).rev() {
+        x[c] = (b[c] - (c + 1..3).map(|j| a[c][j] * x[j]).sum::<f64>()) / a[c][c];
+    }
+    Some(x)
+}
+
+/// The settings of [`dlog_exponent`]
+#[derive(Clone, Debug)]
+pub struct DlogOpts {
+    /// the denominator degrees M; each with the numerator degrees M - 1, M and M + 1 that the orders allow
+    pub ms: Vec<usize>,
+    /// a pole is real when |Im s| is at most this fraction of |s|
+    pub real: f64,
+    /// a numerator zero within this fraction of |s| makes the pole s a doublet
+    pub doublet: f64,
+    /// a residue within this of 0 (a Froissart doublet) or of 1 (a zero of g) is skipped
+    pub residue: f64,
+}
+
+impl Default for DlogOpts {
+    fn default() -> Self {
+        DlogOpts {
+            ms: (3..10).collect(),
+            real: 0.05,
+            doublet: 1e-6,
+            residue: 0.05,
+        }
+    }
+}
+
+/// The Dlog Pade estimator: g = df/dh = sum_j (j + 1) c_(j+1) h^j has the singularity (1 - h/s)^(mu - 1), a pole of
+/// g'/g at s with residue mu - 1. For each [L/M] approximant of g'/g (`DlogOpts::ms`), the real pole with Re s > 0
+/// nearest the origin that is neither a doublet nor of a residue near 0 or 1 (G. A. Baker, Jr. and P. Graves-Morris,
+/// Pade Approximants, 2nd ed., Cambridge University Press, 1996, ch. 8). c = c_1..c_N in P; None when no approximant
+/// gives such a pole.
+pub fn dlog_exponent<P: Precision<Native>>(c: &[P::Scalar], opts: &DlogOpts) -> Option<Exponent> {
+    if c.len() < 3 {
+        return None;
+    }
+    let g: Vec<P::Scalar> = (0..c.len())
+        .map(|j| c[j] * P::from_dd(DD::from_f64((j + 1) as f64)))
+        .collect();
+    if P::to_dd(g[0]).hi == 0.0 {
+        return None;
+    }
+    let dg: Vec<P::Scalar> = (0..g.len() - 1)
+        .map(|j| g[j + 1] * P::from_dd(DD::from_f64((j + 1) as f64)))
+        .collect();
+    // q = g'/g order by order: q_k = (dg_k - sum_(j=1..k) g_j q_(k-j)) / g_0
+    let ig = recip::<P>(g[0]);
+    let mut q: Vec<P::Scalar> = Vec::with_capacity(dg.len());
+    for k in 0..dg.len() {
+        let s = (1..=k).fold(dg[k], |s, j| s - g[j] * q[k - j]);
+        q.push(s * ig);
+    }
+    let mut est = Vec::new();
+    for &m in &opts.ms {
+        for l in [m.saturating_sub(1), m, m + 1] {
+            if l + m + 1 > q.len() || m == 0 {
+                continue;
+            }
+            let Some((num, den)) = pade::<P>(&q[..l + m + 1], m) else {
+                continue;
+            };
+            let zeros = if num.len() > 1 { roots::<P>(&num) } else { Vec::new() };
+            let dden: Vec<P::Scalar> = (1..den.len())
+                .map(|k| den[k] * P::from_dd(DD::from_f64(k as f64)))
+                .collect();
+            let mut best: Option<(f64, f64, f64)> = None;
+            for z in roots::<P>(&den) {
+                let (re, im) = z.to_f64();
+                let az = z.abs();
+                if im.abs() > opts.real * az || re <= 0.0 {
+                    continue;
+                }
+                if zeros.iter().any(|&w| (z - w).abs() < opts.doublet * az) {
+                    continue;
+                }
+                let res = (horner::<P>(&num, z).0 / horner::<P>(&dden, z).0).to_f64().0;
+                if res.abs() < opts.residue || (res - 1.0).abs() < opts.residue {
+                    continue;
+                }
+                if best.is_none_or(|b| az < b.0) {
+                    best = Some((az, re, res));
+                }
+            }
+            if let Some((_, re, res)) = best {
+                est.push((re, res + 1.0));
+            }
+        }
+    }
+    exponent_of(est)
+}
+
+/// sqrt(d) in P by Newton's method from f64's square root, the root with Re >= 0
+fn csqrt_p<P: Precision<Native>>(d: Cx<P>) -> Cx<P> {
+    let (re, im) = d.to_f64();
+    let r = re.hypot(im);
+    if r == 0.0 {
+        return Cx::real(P::ZERO);
+    }
+    let a = ((r + re) / 2.0).max(0.0).sqrt();
+    let b = ((r - re) / 2.0).max(0.0).sqrt();
+    let mut s = Cx::<P>::from_f64(a, if im < 0.0 { -b } else { b });
+    let half = P::from_dd(DD::from_f64(0.5));
+    for _ in 0..5 {
+        s = (s + d / s).scale(half);
+    }
+    s
+}
+
+/// A quadratic Pade approximant (Shafer): polynomials P, Q, R with P f^2 + Q f + R = O(h^(l + m + n + 2)) for the
+/// series f, p_0 = 1 (D. Shafer, SIAM J. Numer. Anal. 11 (1974) 447, doi:10.1137/0711037). Its two roots in f,
+/// (-Q +- sqrt(Q^2 - 4 P R)) / (2 P), are two sheets of a function with square-root branch points, the zeros of the
+/// discriminant Q^2 - 4 P R: about a fold, the branch the series follows and its mirror.
+#[derive(Clone, Debug)]
+pub struct Shafer<P: Precision<Native>> {
+    pub p: Vec<P::Scalar>,
+    pub q: Vec<P::Scalar>,
+    pub r: Vec<P::Scalar>,
+}
+
+/// the product of two series truncated to n terms
+fn series_mul<P: Precision<Native>>(a: &[P::Scalar], b: &[P::Scalar], n: usize) -> Vec<P::Scalar> {
+    (0..n)
+        .map(|k| {
+            (0..=k)
+                .filter(|&i| i < a.len() && k - i < b.len())
+                .fold(P::ZERO, |s, i| s + a[i] * b[k - i])
+        })
+        .collect()
+}
+
+/// a polynomial's real coefficients (lowest first) evaluated at a complex point
+fn poly_at<P: Precision<Native>>(a: &[P::Scalar], x: Cx<P>) -> Cx<P> {
+    horner::<P>(a, x).0
+}
+
+impl<P: Precision<Native>> Shafer<P> {
+    /// the approximant of degrees (l, m, n) of P, Q, R from f_0..f_(l+m+n+1) (f.len() at least l + m + n + 2), by
+    /// Gaussian elimination with partial pivoting in P on its l + m + n + 2 conditions; None when f is too short or
+    /// the system singular
+    pub fn new(f: &[P::Scalar], (l, m, n): (usize, usize, usize)) -> Option<Self> {
+        let k = l + m + n + 2;
+        if f.len() < k {
+            return None;
+        }
+        let f2 = series_mul::<P>(f, f, k);
+        // unknowns: p_1..p_l, q_0..q_m, r_0..r_n; condition at order o: sum p_i f2_(o-i) + sum q_i f_(o-i) + r_o = 0
+        let mut a: Vec<Vec<P::Scalar>> = vec![vec![P::ZERO; k]; k];
+        let mut b: Vec<P::Scalar> = vec![P::ZERO; k];
+        for o in 0..k {
+            b[o] = -f2[o];
+            for i in 1..=l {
+                if i <= o {
+                    a[o][i - 1] = f2[o - i];
+                }
+            }
+            for i in 0..=m {
+                if i <= o {
+                    a[o][l + i] = f[o - i];
+                }
+            }
+            if o <= n {
+                a[o][l + m + 1 + o] = P::ONE;
+            }
+        }
+        let x = solve_dense::<P>(a, b)?;
+        let mut p = vec![P::ONE];
+        p.extend_from_slice(&x[..l]);
+        Some(Shafer {
+            p,
+            q: x[l..l + m + 1].to_vec(),
+            r: x[l + m + 1..].to_vec(),
+        })
+    }
+
+    /// the discriminant Q^2 - 4 P R, lowest coefficient first
+    pub fn discriminant(&self) -> Vec<P::Scalar> {
+        let d = self.q.len().max(self.p.len() + self.r.len() - 1);
+        let qq = series_mul::<P>(&self.q, &self.q, 2 * self.q.len() - 1);
+        let pr = series_mul::<P>(&self.p, &self.r, self.p.len() + self.r.len() - 1);
+        let four = P::from_dd(DD::from_f64(4.0));
+        (0..(2 * self.q.len() - 1).max(d))
+            .map(|i| {
+                let a = if i < qq.len() { qq[i] } else { P::ZERO };
+                let b = if i < pr.len() { pr[i] } else { P::ZERO };
+                a - four * b
+            })
+            .collect()
+    }
+
+    /// the branch points, the discriminant's roots
+    pub fn branch_points(&self) -> Vec<Cx<P>> {
+        roots::<P>(&self.discriminant())
+    }
+
+    /// the two roots (-Q + sqrt(D), -Q - sqrt(D)) / (2 P) at h, sqrt the root with Re >= 0
+    pub fn sheets(&self, h: Cx<P>) -> (Cx<P>, Cx<P>) {
+        let (pv, qv, rv) = (
+            poly_at::<P>(&self.p, h),
+            poly_at::<P>(&self.q, h),
+            poly_at::<P>(&self.r, h),
+        );
+        let four = Cx::real(P::from_dd(DD::from_f64(4.0)));
+        let sq = csqrt_p::<P>(qv * qv - four * pv * rv);
+        let den = (pv + pv).inv();
+        ((Cx::real(P::ZERO) - qv + sq) * den, (Cx::real(P::ZERO) - qv - sq) * den)
+    }
+}
+
+/// the solution of the dense system a x = b by Gaussian elimination with partial pivoting in P, None when a pivot is
+/// zero or not finite
+fn solve_dense<P: Precision<Native>>(mut a: Vec<Vec<P::Scalar>>, mut b: Vec<P::Scalar>) -> Option<Vec<P::Scalar>> {
+    let n = b.len();
+    for c in 0..n {
+        let piv = (c..n).max_by(|&x, &y| P::to_dd(a[x][c]).hi.abs().total_cmp(&P::to_dd(a[y][c]).hi.abs()))?;
+        let pv = P::to_dd(a[piv][c]).hi;
+        if pv == 0.0 || !pv.is_finite() {
+            return None;
+        }
+        a.swap(c, piv);
+        b.swap(c, piv);
+        let inv = recip::<P>(a[c][c]);
+        for r in c + 1..n {
+            let f = a[r][c] * inv;
+            let (top, bot) = a.split_at_mut(r);
+            for (x, &y) in bot[0][c..].iter_mut().zip(&top[c][c..]) {
+                *x = *x - f * y;
+            }
+            b[r] = b[r] - f * b[c];
+        }
+    }
+    let mut x = vec![P::ZERO; n];
+    for c in (0..n).rev() {
+        let s = (c + 1..n).fold(b[c], |s, j| s - a[c][j] * x[j]);
+        x[c] = s * recip::<P>(a[c][c]);
+    }
+    Some(x)
 }
 
 #[cfg(test)]
