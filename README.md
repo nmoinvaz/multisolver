@@ -47,7 +47,7 @@ In octo-double, the Newton matrix factored in double-double reaches the same acc
 | `anm` | the asymptotic numerical method: the Taylor series of a solution branch in the problem's parameter, and its radius |
 | `predict` | continuation predictors: Lagrange extrapolation, the cubic Hermite, and the exact tangent |
 | `arclength` | pseudo-arclength continuation through folds: the bordered corrector, step control by the corrector's contraction, fold detection by the tangent's sign, and the fold's location |
-| `singularity` | the nearest singularities of a series from its coefficients: Pade poles that recur across the approximants' orders, the root test's radius, the ratio method of Domb and Sykes, and a recurrence for a conjugate pair |
+| `singularity` | the nearest singularities of a series from its coefficients: Pade poles that recur across the approximants' orders, the root test's radius, the ratio method of Domb and Sykes, and a recurrence for a conjugate pair, the exponent that tells a square-root point from a pole (ratio fit and Dlog Pade), and quadratic Pade approximants that continue a branch onto its mirror sheet |
 
 Pseudo-arclength continuation follows a branch through both of its folds and locates them, where continuation in the
 parameter stops at the first.
