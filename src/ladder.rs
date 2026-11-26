@@ -192,7 +192,9 @@ where
         Ok((f, true))
     }
     fn stale(&mut self) {
+        // the factors in hand are dropped, so that a later stage forms its own too
         self.stale = true;
+        *self.kept = None;
     }
 }
 
@@ -255,4 +257,74 @@ where
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+
+    /// x^2 = 2 in any precision, counting its Jacobians
+    struct Sqrt2(Cell<usize>);
+
+    impl<P: Precision<Native>> Problem<P> for Sqrt2 {
+        fn len(&self) -> usize {
+            1
+        }
+        fn residual(&self, z: &[&[f64]], _par: bool) -> Result<Vec<P::Scalar>, String> {
+            let x = P::from_raw(&z.iter().map(|p| p[0]).collect::<Vec<_>>());
+            Ok(vec![x * x - P::from_dd(multidouble::dd::DD::from_f64(2.0))])
+        }
+        fn jacobian(&self, z: &[&[f64]], _par: bool) -> Result<(Vec<Vec<f64>>, usize), String> {
+            self.0.set(self.0.get() + 1);
+            let x = P::from_raw(&z.iter().map(|p| p[0]).collect::<Vec<_>>());
+            let d = x + x;
+            let ld = multidouble::linalg::ld_for(1);
+            Ok((
+                (0..P::PARTS)
+                    .map(|q| {
+                        let mut c = vec![0.0; ld];
+                        c[0] = P::part(d, q);
+                        c
+                    })
+                    .collect(),
+                ld,
+            ))
+        }
+    }
+
+    /// Pass: once a chord stage marks its factors stale, the next stage's first step forms new ones rather than take
+    /// the stale ones from the cache the stages share (the factors formed count 1, and the cache holds them).
+    #[test]
+    fn stale_factors_are_not_handed_on() {
+        let pr = Sqrt2(Cell::new(0));
+        let st = Stage::new(Prec::Double, Prec::Double, Solve::Double, 4).with_chord();
+        let z = [vec![1.5], vec![0.0]];
+        let zr: Vec<&[f64]> = z.iter().map(Vec::as_slice).collect();
+        let mut kept = None;
+        let mut first = Kept {
+            pr: &pr,
+            st,
+            par: false,
+            kept: &mut kept,
+            stale: false,
+            formed: 0,
+        };
+        let _ = Source::<Double, Rc<Lu>>::get(&mut first, &zr).unwrap();
+        Source::<Double, Rc<Lu>>::stale(&mut first);
+        let mut next = Kept {
+            pr: &pr,
+            st,
+            par: false,
+            kept: &mut kept,
+            stale: false,
+            formed: 0,
+        };
+        let (_, fresh) = Source::<Double, Rc<Lu>>::get(&mut next, &zr).unwrap();
+        assert!(
+            fresh && next.formed == 1 && pr.0.get() == 2,
+            "the stale factors were handed on"
+        );
+        assert!(kept.is_some());
+    }
 }
