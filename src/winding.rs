@@ -22,19 +22,19 @@
 /// a complex number (re, im) in f64
 pub type C64 = (f64, f64);
 
-fn cadd(a: C64, b: C64) -> C64 {
+pub(crate) fn cadd(a: C64, b: C64) -> C64 {
     (a.0 + b.0, a.1 + b.1)
 }
 
-fn csub(a: C64, b: C64) -> C64 {
+pub(crate) fn csub(a: C64, b: C64) -> C64 {
     (a.0 - b.0, a.1 - b.1)
 }
 
-fn cmul(a: C64, b: C64) -> C64 {
+pub(crate) fn cmul(a: C64, b: C64) -> C64 {
     (a.0 * b.0 - a.1 * b.1, a.0 * b.1 + a.1 * b.0)
 }
 
-fn cdiv(a: C64, b: C64) -> C64 {
+pub(crate) fn cdiv(a: C64, b: C64) -> C64 {
     // Smith's division, which neither overflows nor underflows for scaled operands
     if b.0.abs() >= b.1.abs() {
         let r = b.1 / b.0;
@@ -47,7 +47,7 @@ fn cdiv(a: C64, b: C64) -> C64 {
     }
 }
 
-fn cabs(a: C64) -> f64 {
+pub(crate) fn cabs(a: C64) -> f64 {
     a.0.hypot(a.1)
 }
 
