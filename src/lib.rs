@@ -13,6 +13,8 @@
 //! * [`quasi`]: Newton's method with Broyden's updates between its factorizations (Deuflhard's QNERR);
 //! * [`gcr`]: a preconditioned Krylov solver (GMRES in its GCR form) on exact Jacobian-vector products, and the Newton
 //!   method whose steps it refines from an approximate factorization;
+//! * [`homotopy`]: a homotopy in a held offset, F(z) - a - (1 - t) b from a start that solves it at t = 0, with step
+//!   control that stops at a fold;
 //! * [`lm`]: the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular;
 //! * [`anm`]: the asymptotic numerical method, the Taylor series of a solution branch in the problem's parameter;
 //! * [`predict`]: predictors for continuation: Lagrange extrapolation, the cubic Hermite, and the exact tangent;
@@ -70,6 +72,7 @@ pub mod circle;
 pub mod deflation;
 pub mod equil;
 pub mod gcr;
+pub mod homotopy;
 pub mod kantorovich;
 pub mod ladder;
 pub mod lm;
