@@ -21,6 +21,8 @@
 //! * [`deflation`]: further roots from the same start, with the known ones deflated (Farrell, Birkisson and Funke);
 //! * [`singularity`]: the nearest singularities of a series from its coefficients: Pade poles that recur across the
 //!   approximants' orders, the root test's radius, the ratio method and a recurrence for a conjugate pair;
+//! * [`locate`]: the nearest singularity of a series from its coefficients in f64, double-, quad- and octo-double:
+//!   its place, its exponent, real or one of a conjugate pair, and an error bar over the fit choices;
 //! * [`equil`]: row and column scalings that equilibrate a matrix: Ruiz's iteration and Curtis and Reid's
 //!   least-squares scaling, with a floor that keeps negligible entries from steering it;
 //! * [`subspace`]: the weakest singular directions of the Jacobian, Newton's method with them removed from its steps,
@@ -71,6 +73,7 @@ pub mod gcr;
 pub mod kantorovich;
 pub mod ladder;
 pub mod lm;
+pub mod locate;
 pub mod newton;
 pub mod prec;
 pub mod predict;
