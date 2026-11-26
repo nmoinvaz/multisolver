@@ -653,3 +653,98 @@ fn continuation_stops_at_a_start_that_meets_stop() {
     let c = continuation::<Double, _, _>(&fam, a, &opts, ex::<Double>, |_| false).unwrap();
     assert!(!(c.points.len() == 1 && c.ds.is_empty()), "control did not fire");
 }
+
+/// the branch's exact point with z_1 = (1 - p^2)^(1/2) at p, as w = (z, p) in P
+fn on_branch<P: Precision<Native>>(p: f64) -> Vec<P::Scalar> {
+    let mut z = vec![(1.0 - p * p).sqrt()];
+    for i in 1..N {
+        z.push((z[i - 1] * z[i - 1] + p) / 2.0);
+    }
+    z.into_iter().chain([p]).map(|v| s::<P>(v)).collect()
+}
+
+/// Pass, written before the first run: from the start, `step_from` corrects a prediction 1e-6 off the branch's point at
+/// p = 0.3 (each unknown moved by 1e-6) to max |G| <= 1e-28 with a first contraction below 1e-4, and with `end_tangent`
+/// false the point keeps the start's tangent bit for bit while with it the tangent is the end's. The control: a
+/// prediction 0.5 off must not reach the branch with so small a contraction.
+#[test]
+fn step_from_corrects_a_given_prediction() {
+    let fam = Fold::<Double>::new();
+    let z0 = z_start::<Double>();
+    let a = start::<Double, _, _>(&fam, &parts(&z0), DD::ZERO, 1.0, false, ex::<Double>).unwrap();
+    let run = |off: f64, end_tangent: bool| {
+        let pred: Vec<DD> = on_branch::<Double>(0.3)
+            .iter()
+            .map(|&v| v + DD::from_f64(off))
+            .collect();
+        multisolver::arclength::step_from::<Double, _, _>(
+            &fam,
+            &a,
+            &pred,
+            end_tangent,
+            &corrector(1e-28),
+            &ex::<Double>,
+        )
+        .unwrap()
+    };
+    let (rep, pt) = run(1e-6, false);
+    let pt = pt.expect("the corrector converged");
+    let theta0 = rep.theta[0];
+    let g = g_err(&fam, &pt.z, pt.p);
+    println!(
+        "step_from: {} steps, theta_0 {theta0:.3e}, max |G| {g:.3e}",
+        rep.scale.len()
+    );
+    assert!(g <= 1e-28 && theta0 < 1e-4, "{g:e} {theta0:e}");
+    assert!(pt.t.iter().zip(&a.t).all(|(x, y)| x.hi == y.hi && x.lo == y.lo));
+    let (_, pe) = run(1e-6, true);
+    assert!(pe.unwrap().t.iter().zip(&a.t).any(|(x, y)| x.hi != y.hi));
+    let (c, cp) = run(0.5, true);
+    let c0 = c.theta.first().copied().unwrap_or(f64::INFINITY);
+    println!("control, 0.5 off: converged {}, theta_0 {c0:.3e}", cp.is_some());
+    assert!(cp.is_none() || c0 >= 1e-4, "control did not fire");
+}
+
+/// the branch from the start with every correction starting damped (lambda0 0.5, as a corrector that damps its first
+/// step from a prediction) and `accept_damped`: (path, the accepted steps whose corrector damped)
+fn damped_start(accept_damped: bool) -> (Path<Double>, usize) {
+    let fam = Fold::<Double>::new();
+    let z0 = z_start::<Double>();
+    let a = start::<Double, _, _>(&fam, &parts(&z0), DD::ZERO, 1.0, false, ex::<Double>).unwrap();
+    let opts = ArcOpts {
+        max_points: 200,
+        accept_damped,
+        newton: NewtonOpts {
+            lambda0: 0.5,
+            ..corrector(1e-28)
+        },
+        ..Default::default()
+    };
+    let path = continuation::<Double, _, _>(&fam, a, &opts, ex::<Double>, |pt| pt.z[0][0] < -0.5).unwrap();
+    let damped = path.reports.iter().filter(|r| r.scale.iter().any(|&l| l < 1.0)).count();
+    (path, damped)
+}
+
+/// Pass, written before the first run: with every correction starting at lambda 0.5 and `accept_damped`, the
+/// continuation takes damped steps (every one) and still passes the fold with every point on the branch
+/// (`path_checks`, 1e-27). The control: without it every step is refused, and the continuation stalls at its start.
+#[test]
+fn continuation_accepts_damped_corrections() {
+    let fam = Fold::<Double>::new();
+    let (path, damped) = damped_start(true);
+    let checks = path_checks(&fam, &path, 1e-27);
+    let (plain, _) = damped_start(false);
+    println!(
+        "accept_damped: {} points, {} refused, {damped} damped steps taken, checks {checks:?}; without: {} points, \
+         stalled {}",
+        path.points.len(),
+        path.refused,
+        plain.points.len(),
+        plain.stalled
+    );
+    assert!(
+        damped >= 1 && damped == path.reports.len() && checks.iter().all(|&c| c),
+        "{damped} {checks:?}"
+    );
+    assert!(plain.points.len() == 1 && plain.stalled, "control did not fire");
+}
