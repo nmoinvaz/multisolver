@@ -4,7 +4,8 @@
 //! problem. Continuation in z and p together takes a [`Family`], the residual, the Jacobian and dF/dp at any p.
 //!
 //! * [`newton`]: the Newton step and the damped Newton loop, the chord and Shamanskii methods that reuse its
-//!   factors, and the Newton matrix factored in double-double or f64 for a residual in P;
+//!   factors, the Newton matrix factored in double-double or f64 for a residual in P, and the floor rule that ends
+//!   a run at its precision's floor;
 //! * [`quasi`]: Newton's method with Broyden's updates between its factorizations (Deuflhard's QNERR);
 //! * [`gcr`]: a preconditioned Krylov solver (GMRES in its GCR form) on exact Jacobian-vector products, and the Newton
 //!   method whose steps it refines from an approximate factorization;
@@ -70,7 +71,7 @@ pub use multidouble;
 pub use multidouble::dd::DD;
 pub use multidouble::precision::{Double, Octo, Precision, Quad};
 pub use multidouble::simd::Native;
-pub use newton::{NewtonOpts, NewtonReport};
+pub use newton::{NewtonOpts, NewtonReport, Stop};
 
 /// A system F(z) = 0 of `len()` equations in as many unknowns, evaluated in the precision P. The state z is held as
 /// P::PARTS part arrays of f64 (part q of unknown i at `z[q][i]`).
