@@ -16,6 +16,8 @@
 //! * [`deflation`]: further roots from the same start, with the known ones deflated (Farrell, Birkisson and Funke);
 //! * [`singularity`]: the nearest singularities of a series from its coefficients: Pade poles that recur across the
 //!   approximants' orders, the root test's radius, the ratio method and a recurrence for a conjugate pair;
+//! * [`equil`]: row and column scalings that equilibrate a matrix: Ruiz's iteration and Curtis and Reid's
+//!   least-squares scaling, with a floor that keeps negligible entries from steering it;
 //! * [`subspace`]: the weakest singular directions of the Jacobian, Newton's method with them removed from its steps,
 //!   and the sensitivities of single unknowns to the residual;
 //! * [`winding`]: the number and the places of the zeros of an analytic function inside a polygon, by the argument
@@ -56,6 +58,7 @@
 pub mod anm;
 pub mod arclength;
 pub mod deflation;
+pub mod equil;
 pub mod gcr;
 pub mod lm;
 pub mod newton;
