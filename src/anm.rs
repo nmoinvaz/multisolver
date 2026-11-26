@@ -8,7 +8,8 @@
 //! products J x ([`Jvp`]): the residual b - J x, solved with the same factors, corrects x.
 //!
 //! The series is valid up to about [`Branch::radius`], Cochelin's estimate (delta |z_1| / |z_N|)^(1 / (N - 1)), where
-//! the last term would be delta times the first.
+//! the last term would be delta times the first. [`chain`] continues a branch by such steps, each corrected by
+//! Newton's method at its end, with the step control of hp's anm_run.py.
 use crate::newton::{exact, Factored};
 use crate::prec::{max_abs, parts};
 use crate::{Jvp, ResidualJet};
@@ -124,6 +125,139 @@ impl<P: Precision<Native>> Branch<P> {
         }
         (delta * max_abs::<P>(&self.z[1]) / last).powf(1.0 / (n - 1) as f64)
     }
+}
+
+/// The settings of [`chain`]
+#[derive(Clone, Copy, Debug)]
+pub struct ChainOpts {
+    /// the series' order N at each base
+    pub order: usize,
+    /// refinements per order of the series' solves
+    pub refine: usize,
+    /// Cochelin's delta: a step at most `Branch::radius(eps)`, where the series' last term is eps times its first
+    pub eps: f64,
+    /// the longest step
+    pub h_max: f64,
+    /// the first step (0: h_max)
+    pub a0: f64,
+    /// an accepted step's successor is this many times longer, at most h_max
+    pub grow: f64,
+    /// grow only after a step accepted at its first attempt
+    pub hold: bool,
+    /// halvings of a refused step at most
+    pub halvings: usize,
+    /// accepted steps at most
+    pub steps: usize,
+    /// the parameter past which no step goes
+    pub p_max: f64,
+    /// the corrector at p0 + a (`newton` on the problem there)
+    pub newton: crate::newton::NewtonOpts,
+    pub par: bool,
+}
+
+impl Default for ChainOpts {
+    fn default() -> Self {
+        ChainOpts {
+            order: 16,
+            refine: 1,
+            eps: 1e-16,
+            h_max: 1.0,
+            a0: 0.0,
+            grow: 2.0,
+            hold: false,
+            halvings: 3,
+            steps: 20,
+            p_max: f64::INFINITY,
+            newton: crate::newton::NewtonOpts::default(),
+            par: true,
+        }
+    }
+}
+
+/// One attempt of [`chain`]: the base's parameter, the step a and Cochelin's bound on it, the prediction's max |F| at
+/// p0 + a, the corrector's report, and whether the step was accepted (the corrector converged)
+#[derive(Clone, Debug)]
+pub struct ChainStep {
+    pub p: f64,
+    pub a: f64,
+    pub a_max: f64,
+    pub f_pred: f64,
+    pub newton: crate::newton::NewtonReport,
+    pub accepted: bool,
+}
+
+/// Chained steps of the series: from the solution z at the parameter p0 (P::PARTS part arrays, replaced by the last
+/// accepted solution), the series of order N at each base (`series` on `at(p)`, the problem with its parameter's
+/// origin at p), the step a = min(the current step, Cochelin's bound, p_max - p), the prediction z(a), and Newton's
+/// method on `at(p + a)` from it. A converged corrector makes its solution the next base and the next step `grow`
+/// times longer (with `hold`, only after an acceptance at the first attempt), at most h_max; a failed one halves the
+/// step, at most `halvings` times, after which the chain stops. It stops too at `steps` accepted steps or at p_max.
+/// Returns every attempt.
+pub fn chain<P, Pr, M>(at: M, z: &mut Vec<Vec<f64>>, p0: f64, opts: &ChainOpts) -> Result<Vec<ChainStep>, String>
+where
+    P: Precision<Native>,
+    Pr: ResidualJet<P> + Jvp<P>,
+    M: Fn(f64) -> Pr,
+{
+    // NaN fails each comparison
+    let valid = opts.order >= 2 && opts.h_max > 0.0 && opts.grow >= 1.0;
+    if !valid {
+        return Err(format!(
+            "chain: order >= 2, h_max > 0 and grow >= 1, not {}, {}, {}",
+            opts.order, opts.h_max, opts.grow
+        ));
+    }
+    let mut out = Vec::new();
+    let mut p = p0;
+    let mut step = if opts.a0 > 0.0 {
+        opts.a0.min(opts.h_max)
+    } else {
+        opts.h_max
+    };
+    let mut accepted = 0;
+    while accepted < opts.steps && p < opts.p_max {
+        let base = at(p);
+        let br = series::<P, Pr>(&base, &parts(z), opts.order, opts.refine, opts.par)?;
+        let a_max = br.radius(opts.eps);
+        let mut a = step.min(a_max).min(opts.p_max - p);
+        let positive = a > 0.0;
+        if !positive {
+            return Err(format!("chain: no step from p {p} (Cochelin's bound {a_max})"));
+        }
+        let mut done = false;
+        for attempt in 0..=opts.halvings {
+            let next = at(p + a);
+            let mut zt = br.eval_parts(a);
+            let f_pred = max_abs::<P>(&next.residual(&parts(&zt), opts.par)?);
+            let rep = crate::newton::newton::<P, Pr>(&next, &mut zt, &opts.newton)?;
+            let ok = rep.converged;
+            out.push(ChainStep {
+                p,
+                a,
+                a_max,
+                f_pred,
+                newton: rep,
+                accepted: ok,
+            });
+            if ok {
+                *z = zt;
+                p += a;
+                accepted += 1;
+                step = if !opts.hold || attempt == 0 {
+                    (a * opts.grow).min(opts.h_max)
+                } else {
+                    a
+                };
+                done = true;
+                break;
+            }
+            a *= 0.5;
+        }
+        if !done {
+            break;
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
