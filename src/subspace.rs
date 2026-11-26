@@ -3,8 +3,7 @@
 //! steps' components along such a subspace removed, and the sensitivities y = J^-T e_k of single unknowns to the
 //! residual (a change dF of the residual moves unknown k by -y . dF).
 //!
-//! The transpose solves use a factorization of J^T formed beside J's, since multidouble's `Precision` has no
-//! transpose solve; it doubles the factorizations of these routines, not their solves.
+//! The transpose solves use J's own factors (multidouble's `TransposeSolve`), so these routines factor J once.
 //!
 //! Removing a weak subspace from Newton's steps keeps the well-determined part of the solution converging without its
 //! second-order error leaking into directions the equations fix only weakly (the reduced Newton step of Deuflhard,
@@ -14,56 +13,28 @@ use crate::newton::{newton_with, Factored, NewtonOpts, NewtonReport};
 use crate::prec::nan_max;
 use crate::Problem;
 use multidouble::dd::DD;
-use multidouble::precision::Precision;
+use multidouble::precision::{Precision, TransposeSolve};
 use multidouble::simd::Native;
 use rayon::prelude::*;
 
-/// The factors of J and of J^T at a point, and ||J||_1 (the largest column sum of |J|, hi parts)
-pub struct Factors<P: Precision<Native>> {
+/// The factors of J at a point, which solve with J and J^T, and ||J||_1 (the largest column sum of |J|, hi parts)
+pub struct Factors<P: TransposeSolve<Native>> {
     pub n: usize,
     pub lu: P::Lu,
-    pub lut: P::Lu,
     pub norm1: f64,
 }
 
-impl<P: Precision<Native>> Factors<P> {
-    /// J and J^T of `pr` at z, factored; with `par` the transpose's columns and the two factorizations run on rayon
-    /// tasks, their factors the same
+impl<P: TransposeSolve<Native>> Factors<P> {
+    /// J of `pr` at z, factored (in parallel with `par`, the factors the same)
     pub fn new<Pr: Problem<P> + ?Sized>(pr: &Pr, z: &[&[f64]], par: bool) -> Result<Self, String> {
         let n = pr.len();
         let (c, ld) = pr.jacobian(z, par)?;
         let norm1 = (0..n)
             .map(|j| c[0][j * ld..j * ld + n].iter().map(|v| v.abs()).sum::<f64>())
             .fold(0.0, nan_max);
-        let mut ct = vec![vec![0.0; ld * n]; P::PARTS];
-        // column i of J^T is row i of J
-        let row = |cq: &[f64], i: usize, col: &mut [f64]| {
-            for (j, x) in col[..n].iter_mut().enumerate() {
-                *x = cq[j * ld + i];
-            }
-        };
-        for (cq, tq) in c.iter().zip(ct.iter_mut()) {
-            if par {
-                tq.par_chunks_mut(ld)
-                    .take(n)
-                    .enumerate()
-                    .for_each(|(i, col)| row(cq, i, col));
-            } else {
-                tq.chunks_mut(ld)
-                    .take(n)
-                    .enumerate()
-                    .for_each(|(i, col)| row(cq, i, col));
-            }
-        }
-        let (lu, lut) = if par {
-            rayon::join(|| P::lu_factor(n, ld, c, par), || P::lu_factor(n, ld, ct, par))
-        } else {
-            (P::lu_factor(n, ld, c, par), P::lu_factor(n, ld, ct, par))
-        };
         Ok(Factors {
             n,
-            lu: lu?,
-            lut: lut?,
+            lu: P::lu_factor(n, ld, c, par)?,
             norm1,
         })
     }
@@ -130,10 +101,10 @@ impl<P: Precision<Native>> Factors<P> {
         x
     }
 
-    /// J^-T b
+    /// J^-T b, with J's factors
     pub fn solve_t(&self, b: &[P::Scalar]) -> Vec<P::Scalar> {
         let mut x = b.to_vec();
-        P::lu_solve(&self.lut, &mut x);
+        P::lu_solve_t(&self.lu, &mut x);
         x
     }
 
@@ -244,7 +215,7 @@ fn jacobi(mut a: Vec<Vec<f64>>) -> (Vec<f64>, Vec<Vec<f64>>) {
 /// its singular values. Inverse subspace iteration on (J^T J)^-1 from a deterministic start (`seed`), `iters`
 /// products, then Rayleigh-Ritz on the subspace: the eigenvalues lambda of V^T (J^T J)^-1 V give sigma = lambda^-1/2.
 /// The w products of an iteration run on rayon tasks; the result does not depend on it.
-pub fn weak_subspace<P: Precision<Native>>(
+pub fn weak_subspace<P: TransposeSolve<Native>>(
     f: &Factors<P>,
     w: usize,
     iters: usize,
