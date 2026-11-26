@@ -60,6 +60,7 @@ parameter stops at the first.
 |---|---|
 | `deflation` | further roots from the same start: the problem with its known roots deflated (Farrell, Birkisson and Funke), its residual and Jacobian exact so that any solver runs on it, its Newton matrix also solved through the problem's own factors (Sherman-Morrison) so that structured or lowered factors keep serving, and the roots collected one search at a time |
 | `winding` | the number of zeros of an analytic function inside a polygon by the argument principle, with adaptive sampling that catches close pairs and rows of zeros, their first moment, and Muller's method for one zero |
+| `circle` | the winding number of an analytic function on a circle, with the step, alias and verification rules of `winding`, and the zeros inside from the trapezoid rule's power sums, each with an error estimate |
 
 Deflation finds all five roots of z⁵ = 1 from one start.
 

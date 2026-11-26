@@ -20,6 +20,8 @@
 //!   and the sensitivities of single unknowns to the residual;
 //! * [`winding`]: the number and the places of the zeros of an analytic function inside a polygon, by the argument
 //!   principle, and Muller's method for one zero;
+//! * [`circle`]: the winding number of an analytic function on a circle, and the places of the zeros inside from its
+//!   power sums;
 //! * [`prec`]: helpers for states held as part arrays in any of the precisions.
 //!
 //! A problem is its residual and its exact Jacobian. Here x^2 = 2 in double-double, solved by the damped Newton loop:
@@ -55,6 +57,7 @@
 //! ```
 pub mod anm;
 pub mod arclength;
+pub mod circle;
 pub mod deflation;
 pub mod gcr;
 pub mod lm;
