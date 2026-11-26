@@ -31,6 +31,7 @@ series of order N costs N orders rather than N evaluations of growing length.
 | `quasi` | Newton's method with Broyden's good updates between its factorizations (Deuflhard's QNERR), one residual and one solve per step and no Jacobian |
 | `gcr` | GMRES in its GCR form on exact Jacobian-vector products, with an adaptive Krylov direction where GMRES stagnates, and the Newton method whose solves it refines from an approximate factorization |
 | `lm` | the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular, its steps solved in double-double in any precision, handing over to Newton near the root |
+| `equil` | row and column scalings that equilibrate a matrix: Ruiz's iteration in the max norm and Curtis and Reid's least-squares scaling, with a floor that keeps negligible entries from steering it, rounded to powers of two if wanted |
 | `subspace` | the weakest singular directions of the Jacobian, Newton's method with them removed from its steps, the sensitivities of single unknowns, and the 1-norm condition estimate |
 
 Newton's method takes the same steps in every precision until it reaches that precision's floor.
