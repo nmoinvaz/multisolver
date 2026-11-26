@@ -8,6 +8,8 @@
 //!   floor rule that ends a run at its precision's floor;
 //! * [`ladder`]: Newton's method through a ladder of precisions of the residual, the Jacobian and its factors, each
 //!   stage ended at its floor by the floor rule;
+//! * [`kantorovich`]: the a-posteriori Kantorovich quantities of a Newton run (theta, `[h]`, `[omega]`) and its error
+//!   estimate;
 //! * [`quasi`]: Newton's method with Broyden's updates between its factorizations (Deuflhard's QNERR);
 //! * [`gcr`]: a preconditioned Krylov solver (GMRES in its GCR form) on exact Jacobian-vector products, and the Newton
 //!   method whose steps it refines from an approximate factorization;
@@ -66,6 +68,7 @@ pub mod circle;
 pub mod deflation;
 pub mod equil;
 pub mod gcr;
+pub mod kantorovich;
 pub mod ladder;
 pub mod lm;
 pub mod newton;
