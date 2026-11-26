@@ -70,8 +70,8 @@ pub struct NewtonOpts {
     /// The floor rule: a full step (lambda 1) of max |dz| at most `floor_dz` that cuts max |F| by less than this
     /// factor, or that the damping refuses, ends the run unconverged at the precision's floor ([`Stop::Floor`]). 10 is
     /// the usual factor, and 0 (the default) turns the rule off. Only a step with factors formed at its own iterate
-    /// stops the run; a chord step that gains this little has its factors formed anew by the loops that know it is
-    /// one. The rule assumes Newton's quadratic rate: factors whose linear contraction is above
+    /// stops the run. A chord step that gains this little has its factors formed anew instead
+    /// ([`crate::ladder`]). The rule assumes Newton's quadratic rate: factors whose linear contraction is above
     /// 1 / floor_cut (f64 factors of a Jacobian of condition above about 10^14) end the run early.
     pub floor_cut: f64,
     /// the floor rule's bound on the step, max |dz| over the unknowns (absolute, from the hi parts): a larger step is
@@ -352,6 +352,45 @@ pub fn lowered<P: Precision<Native>, Pr: Problem<P> + ?Sized>(
 ) -> Result<Lowered, String> {
     let (c, ld) = pr.jacobian(z, par)?;
     Lowered::factor(pr.len(), ld, c, to, par)
+}
+
+/// x in the precision Q: its leading min(P::PARTS, Q::PARTS) parts, exact when Q holds them all and otherwise
+/// within the ulp of the last part kept, as the parts do not overlap
+pub fn convert<P: Precision<Native>, Q: Precision<Native>>(x: P::Scalar) -> Q::Scalar {
+    let k = P::PARTS.min(Q::PARTS);
+    let mut p = [0.0f64; 8];
+    for (q, v) in p.iter_mut().enumerate().take(k) {
+        *v = P::part(x, q);
+    }
+    Q::new(&p[..k])
+}
+
+/// A Newton matrix factored in the precision Q for a residual in P: each solve -M^-1 r takes r to Q ([`convert`]),
+/// solves there with `Q::lu_solve` and takes the result back to P. Each step then contracts Newton's error by about
+/// cond(J) times Q's rounding: with Q = `Quad` for P = `Octo`, by cond(J) 2^-209, where double-double factors
+/// ([`Lowered`]) stall once cond(J) 2^-104 nears 1.
+pub struct FactorsIn<Q: Precision<Native>>(pub Q::Lu);
+
+impl<Q: Precision<Native>> FactorsIn<Q> {
+    /// The Jacobian given as `Problem::jacobian` returns it (part q of entry (i, j) at `c[q][j * ld + i]`, any number
+    /// of parts), its entries taken to Q's parts (the leading ones kept, or zero parts added) and factored by
+    /// `Q::lu_factor`
+    pub fn factor(n: usize, ld: usize, mut c: Vec<Vec<f64>>, par: bool) -> Result<Self, String> {
+        let Some(len) = c.first().map(Vec::len) else {
+            return Err("FactorsIn::factor: a Jacobian without parts".into());
+        };
+        c.truncate(Q::PARTS);
+        c.resize(Q::PARTS, vec![0.0; len]);
+        Ok(FactorsIn(Q::lu_factor(n, ld, c, par)?))
+    }
+}
+
+impl<P: Precision<Native>, Q: Precision<Native>> Factored<P> for FactorsIn<Q> {
+    fn solve_neg(&self, r: &[P::Scalar]) -> Vec<P::Scalar> {
+        let mut b: Vec<Q::Scalar> = r.iter().map(|&v| -convert::<P, Q>(v)).collect();
+        Q::lu_solve(&self.0, &mut b);
+        b.into_iter().map(convert::<Q, P>).collect()
+    }
 }
 
 /// A factorization reused for `every` steps: the returned closure calls `factor` at the first step and again every
