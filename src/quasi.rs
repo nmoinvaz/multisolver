@@ -178,7 +178,7 @@ pub fn newton_quasi<P: Precision<Native>, Pr: Problem<P> + ?Sized, F: Factored<P
         let lu = factor(&parts(z))?;
         info.factorizations += 1;
         let w = weights(opts.scaling, &parts(z), &parts(&zp));
-        let t = match correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts)? {
+        let t = match correction_step::<P, Pr, F>(pr, &parts(z), &f, &lu, &prev, w.as_deref(), opts, None)? {
             Trial::Taken(t) => t,
             Trial::Refused => {
                 rep.fnorm.push(fmax);
