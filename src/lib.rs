@@ -4,8 +4,10 @@
 //! problem. Continuation in z and p together takes a [`Family`], the residual, the Jacobian and dF/dp at any p.
 //!
 //! * [`newton`]: the Newton step and the damped Newton loop, the chord and Shamanskii methods that reuse its
-//!   factors, the Newton matrix factored in double-double or f64 for a residual in P, and the floor rule that ends
-//!   a run at its precision's floor;
+//!   factors, the Newton matrix factored in f64, double-double or another precision for a residual in P, and the
+//!   floor rule that ends a run at its precision's floor;
+//! * [`ladder`]: Newton's method through a ladder of precisions of the residual, the Jacobian and its factors, each
+//!   stage ended at its floor by the floor rule;
 //! * [`quasi`]: Newton's method with Broyden's updates between its factorizations (Deuflhard's QNERR);
 //! * [`gcr`]: a preconditioned Krylov solver (GMRES in its GCR form) on exact Jacobian-vector products, and the Newton
 //!   method whose steps it refines from an approximate factorization;
@@ -58,6 +60,7 @@ pub mod anm;
 pub mod arclength;
 pub mod deflation;
 pub mod gcr;
+pub mod ladder;
 pub mod lm;
 pub mod newton;
 pub mod prec;

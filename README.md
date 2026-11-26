@@ -26,7 +26,8 @@ series of order N costs N orders rather than N evaluations of growing length.
 
 | Module | What it does |
 |---|---|
-| `newton` | the Newton step, the damped Newton loop (Deuflhard's correction rule or a residual rule), the chord and Shamanskii methods that reuse a factorization, the Newton matrix factored in double-double or f64 for a residual in quad- or octo-double, NLEQ-ERR's scaled norms for unknowns of different sizes, an a-posteriori error estimate from the simplified corrections, and the floor rule that ends a run at its precision's floor and says why it stopped |
+| `newton` | the Newton step, the damped Newton loop (Deuflhard's correction rule or a residual rule), the chord and Shamanskii methods that reuse a factorization, the Newton matrix factored in f64, double-double or another precision for a residual in quad- or octo-double, NLEQ-ERR's scaled norms for unknowns of different sizes, an a-posteriori error estimate from the simplified corrections, and the floor rule that ends a run at its precision's floor and says why it stopped |
+| `ladder` | Newton's method through a ladder of precisions: double-, quad- and octo-double residuals, or Jacobians formed and factored in double- and quad-double, each stage ended at its floor and continued in the next, with chord steps on the factors in hand |
 | `quasi` | Newton's method with Broyden's good updates between its factorizations (Deuflhard's QNERR), one residual and one solve per step and no Jacobian |
 | `gcr` | GMRES in its GCR form on exact Jacobian-vector products, with an adaptive Krylov direction where GMRES stagnates, and the Newton method whose solves it refines from an approximate factorization |
 | `lm` | the Levenberg-Marquardt method, for starts where Newton's method stalls or its Jacobian is singular, its steps solved in double-double in any precision, handing over to Newton near the root |
