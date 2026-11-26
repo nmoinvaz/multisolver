@@ -12,8 +12,9 @@
 //! f64's rounding.
 //!
 //! The corrector is the local Newton method: a step is refused, and ds halved, when the corrector does not converge,
-//! damps a step (lambda < 1), contracts at first by theta_0 >= `theta_max`, or cannot form or factor its Newton matrix
-//! (a singular one at the prediction). After a step taken the next ds is ds (theta_target / theta_0)^(1/2), within
+//! damps a step (lambda < 1, unless `accept_damped`), contracts at first by theta_0 >= `theta_max`, or cannot form or
+//! factor its Newton matrix (a singular one at the prediction). [`step_from`] corrects from a prediction the caller
+//! gives, such as a series' sum, and can leave the end's tangent to the caller. After a step taken the next ds is ds (theta_target / theta_0)^(1/2), within
 //! [ds / 2, 2 ds] and [`ds_min`, `ds_max`], since the tangent predictor's error, and theta_0 with it, grow as ds^2.
 //! The rule needs theta_0, so the corrector damps by the correction rule.
 //!
@@ -253,8 +254,33 @@ pub fn step<P: Precision<Native>, Fa: Family<P> + ?Sized, F: Factored<P>>(
     opts: &NewtonOpts,
     factor: &impl Fn(&Bordered<'_, P, Fa>, &[&[f64]]) -> Result<F, String>,
 ) -> Result<(NewtonReport, Option<Point<P>>), String> {
-    let n = fam.len();
     let pred: Vec<P::Scalar> = at.w().iter().zip(&at.t).map(|(&a, &t)| a + ds * t).collect();
+    step_from::<P, Fa, F>(fam, at, &pred, true, opts, factor)
+}
+
+/// [`step`] from the caller's prediction `pred` (n + 1 scalars, such as a series' sum, far closer to the branch than
+/// the tangent's): the corrector on [`Bordered`] with the hyperplane through `pred` orthogonal to `at`'s tangent, from
+/// `pred`. With `end_tangent` the new point's tangent is formed at it ([`tangent`], oriented by `at`'s); without, the
+/// point carries `at`'s tangent, for a caller that takes the next one from elsewhere (the next base's series) and
+/// saves the bordered factorization and the Jacobian the tangent costs. `step` is this with pred = w + ds t and the
+/// end tangent, bit for bit.
+pub fn step_from<P: Precision<Native>, Fa: Family<P> + ?Sized, F: Factored<P>>(
+    fam: &Fa,
+    at: &Point<P>,
+    pred: &[P::Scalar],
+    end_tangent: bool,
+    opts: &NewtonOpts,
+    factor: &impl Fn(&Bordered<'_, P, Fa>, &[&[f64]]) -> Result<F, String>,
+) -> Result<(NewtonReport, Option<Point<P>>), String> {
+    let n = fam.len();
+    if pred.len() != n + 1 {
+        return Err(format!(
+            "step_from: a prediction of {} scalars, not {}",
+            pred.len(),
+            n + 1
+        ));
+    }
+    let pred = pred.to_vec();
     let b = Bordered {
         fam,
         t: at.t.clone(),
@@ -272,7 +298,11 @@ pub fn step<P: Precision<Native>, Fa: Family<P> + ?Sized, F: Factored<P>>(
     }
     let wp = parts(&w);
     let (z, p) = split::<P>(&wp, n);
-    let t = tangent::<P, Fa, F>(fam, &z, p, &at.t, opts.par, factor)?;
+    let t = if end_tangent {
+        tangent::<P, Fa, F>(fam, &z, p, &at.t, opts.par, factor)?
+    } else {
+        at.t.clone()
+    };
     let z = z.iter().map(|q| q.to_vec()).collect();
     Ok((rep, Some(Point { z, p, t })))
 }
@@ -293,6 +323,9 @@ pub struct ArcOpts {
     pub theta_max: f64,
     /// points at most, the start included
     pub max_points: usize,
+    /// take a step whose corrector damped (some lambda below 1), as long as its first contraction, normalized to a
+    /// full step's when that step was damped, is below `theta_max`; false, the default, refuses it
+    pub accept_damped: bool,
     /// the corrector's settings, with the correction rule's damping (`Damping::Correction`)
     pub newton: NewtonOpts,
 }
@@ -306,6 +339,7 @@ impl Default for ArcOpts {
             theta_target: 0.125,
             theta_max: 0.5,
             max_points: 100,
+            accept_damped: false,
             newton: NewtonOpts::default(),
         }
     }
@@ -365,10 +399,10 @@ pub fn continuation<P: Precision<Native>, Fa: Family<P> + ?Sized, F: Factored<P>
     while path.points.len() < opts.max_points {
         let at = &path.points[path.points.len() - 1];
         let (rep, next) = step::<P, Fa, F>(fam, at, P::from_dd(DD::from_f64(ds)), &opts.newton, &factor)?;
-        let theta0 = rep.theta.first().copied().unwrap_or(0.0);
         let full = rep.scale.iter().all(|&l| l == 1.0);
+        let theta0 = first_contraction(&rep, opts.accept_damped);
         match next {
-            Some(pt) if full && theta0 < opts.theta_max => {
+            Some(pt) if (full || opts.accept_damped) && theta0 < opts.theta_max => {
                 let pos = |x: P::Scalar| P::to_dd(x).hi > 0.0;
                 if pos(at.tp()) != pos(pt.tp()) {
                     path.folds.push(path.points.len() - 1);
@@ -398,6 +432,18 @@ pub fn continuation<P: Precision<Native>, Fa: Family<P> + ?Sized, F: Factored<P>
         }
     }
     Ok(path)
+}
+
+/// The first step's contraction theta_0, the step rule's measure of the prediction's error. A damped first step (lambda
+/// < 1) with `accept_damped` gives the contraction its full step would have, (theta_0 - (1 - lambda)) / lambda^2 (at
+/// least 0): its simplified correction is (1 - lambda) dz plus a term of lambda^2 / 2 omega |dz|^2, so that theta_0 at
+/// lambda alone would refuse every step damped to lambda <= 1 - theta_max (Deuflhard 2004, section 3.3)
+fn first_contraction(rep: &NewtonReport, accept_damped: bool) -> f64 {
+    let theta = rep.theta.first().copied().unwrap_or(0.0);
+    match rep.scale.first() {
+        Some(&lam) if accept_damped && lam < 1.0 => ((theta - (1.0 - lam)) / (lam * lam)).max(0.0),
+        _ => theta,
+    }
 }
 
 /// The settings of [`locate_fold`]
