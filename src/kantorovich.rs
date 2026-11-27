@@ -10,9 +10,10 @@
 //!
 //! lower bounds of the Kantorovich quantity h_k = omega |dz_k| and of omega, not enclosures. A damped step with
 //! lambda < 1 satisfies |dz_bar - (1 - lambda) dz| <= (lambda^2 / 2) omega |dz|^2, and the triangle inequality gives
-//! `[h_k]` = 2 max(theta_k - (1 - lambda), 0) / lambda^2. Newton's method from z_k converges (Newton-Mysovskikh)
-//! where h_k < 2, and while it does, |z_k - z*| <= |dz_k| / (1 - h_k / 2). The estimate with `[h_k]` in place of h_k
-//! is not a bound, as `[h_k]` is one from below.
+//! `[h_k]` = 2 max(theta_k - (1 - lambda), 0) / lambda^2. Both bounds are proved in Lean, in exact arithmetic
+//! (`lean/Multisolver/Kantorovich.lean`). Newton's method from z_k converges (Newton-Mysovskikh) where h_k < 2, and
+//! while it does, |z_k - z*| <= |dz_k| / (1 - h_k / 2). The estimate with `[h_k]` in place of h_k is not a bound, as
+//! `[h_k]` is one from below.
 //!
 //! These hold for corrections with the exact Jacobian's factors at each step's iterate (`newton`, or `newton_with`
 //! with `exact`). With other factors (`newton_chord`'s reused ones, `newton_lowered`'s, any approximation through

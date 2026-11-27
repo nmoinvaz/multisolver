@@ -8,6 +8,8 @@
   bitwise.
 - The solvers know nothing of any one problem: they see a `Problem` (and `Jvp`, `ResidualJet`) and nothing else.
   Equations, layouts and constants belong to the crate that uses them; tests here use model problems.
+- A bound the documentation states as a theorem is proved in `lean/`, in exact arithmetic, with controls in
+  `lean/Controls` where its conclusion fails without a hypothesis; `lake build` there after changing either.
 - `cargo fmt` (max width 120) and `cargo clippy --all-targets -- -D warnings` (and once with `--features portable`)
   before committing.
 - Commit messages: imperative, a lowercase module prefix where one applies (`newton: ...`, `winding: ...`), 1-3
