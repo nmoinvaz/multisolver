@@ -28,7 +28,7 @@ series of order N costs N orders rather than N evaluations of growing length.
 |---|---|
 | `newton` | the Newton step, the damped Newton loop (Deuflhard's correction rule or a residual rule), the chord and Shamanskii methods that reuse a factorization, the Newton matrix factored in f64, double-double or another precision for a residual in quad- or octo-double, NLEQ-ERR's scaled norms for unknowns of different sizes, an a-posteriori error estimate from the simplified corrections, and the floor rule that ends a run at its precision's floor and says why it stopped |
 | `ladder` | Newton's method through a ladder of precisions: double-, quad- and octo-double residuals, or Jacobians formed and factored in double- and quad-double, each stage ended at its floor and continued in the next, with chord steps on the factors in hand |
-| `kantorovich` | the a-posteriori Kantorovich quantities of a Newton run, theta, `[h]` and `[omega]` (Deuflhard), lower bounds from the norms its report keeps, and the error estimate they give |
+| `kantorovich` | the a-posteriori Kantorovich quantities of a Newton run, theta, `[h]` and `[omega]` (Deuflhard), lower bounds from the norms its report keeps (proved in Lean), and the error estimate they give |
 | `quasi` | Newton's method with Broyden's good updates between its factorizations (Deuflhard's QNERR), one residual and one solve per step and no Jacobian |
 | `gcr` | GMRES in its GCR form on exact Jacobian-vector products, with an adaptive Krylov direction where GMRES stagnates, and the Newton method whose solves it refines from an approximate factorization |
 | `homotopy` | a homotopy in a held offset, F(z) - a - (1 - t) b from a start that solves it at t = 0, with a tangent predictor, a Newton corrector and step control that stops at a fold |
@@ -90,6 +90,9 @@ result and must fail.
 
 The graphs are planted problems too: `cargo run --release --example graphs` computes their data, and
 `python3 scripts/graphs.py` draws them into `docs/graphs`.
+
+The lower bounds of `kantorovich` are proved in Lean 4 on Mathlib, in exact arithmetic, in [`lean`](lean): `lake build`
+there checks them and their controls.
 
 ## Related crates
 
