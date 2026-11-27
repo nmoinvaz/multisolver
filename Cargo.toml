@@ -13,7 +13,7 @@ exclude = ["/.github", "/.claude", "/CLAUDE.md", "/docs", "/scripts", "/lean"]
 
 [dependencies]
 # 4.5.0: the Precision trait (Double, Quad, Octo) and its LUs; the blocked complex LU
-multidouble = "5.1.0"
+multidouble = "6.1.0"
 rayon = "1.10"
 
 [features]
