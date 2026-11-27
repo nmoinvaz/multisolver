@@ -120,7 +120,8 @@ pub enum Kind {
 /// The settings of [`locate`]
 #[derive(Clone, Debug)]
 pub struct Opts {
-    /// the first order of the fit window, as fractions of K (at least order 2)
+    /// the first order of the fit window, as fractions of K (at least order 2). The late windows (0.7 K and 0.8 K) start
+    /// past the orders where a farther singularity or a dressing masks the nearest one, and have few rows: low degrees
     pub starts: Vec<f64>,
     /// the degrees in 1 / k of the ratio fit
     pub ratio_degrees: Vec<usize>,
@@ -135,7 +136,7 @@ pub struct Opts {
 impl Default for Opts {
     fn default() -> Self {
         Opts {
-            starts: vec![0.2, 0.3, 0.4, 0.5, 0.6],
+            starts: vec![0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
             ratio_degrees: (1..=9).collect(),
             three_term_degrees: (2..=9).collect(),
             bar_factor: 2.0,

@@ -476,8 +476,8 @@ fn print_row(r: &Row) {
 }
 
 /// All cells of the table: every criterion holds in each of the 23 gated cases in each of the 3 lanes (N3 is printed),
-/// except D6 in f64, which is **NOT MET** (criteria 1, 2 and 4; see `d6_f64_is_not_met`): 68 of the 69 gated cells meet
-/// all four criteria.
+/// except D6 in f64, which is **NOT MET** (criterion 1, the kind; see `d6_f64_is_not_met`): 68 of the 69 gated cells meet
+/// all four criteria, with the default grid of first orders 0.2 ... 0.8 K as with that of #191 (0.2 ... 0.6 K).
 #[test]
 fn planted_suite() {
     let mut bad = Vec::new();
@@ -493,23 +493,25 @@ fn planted_suite() {
     assert!(bad.is_empty(), "failed cells:\n{}", bad.join("\n"));
 }
 
-/// D6 in f64 (alpha = 1e-8, dressed, K = 30) does not meet criteria 1, 2 and 4: the dressing's own coefficients swamp
-/// the singular ones up to order about 16 and a clean window would start near 0.8 K, which the default grid (starts 0.2
-/// to 0.6 K) does not contain. Criterion 3 holds: the locator says `Unresolved`, with a bar of the order of |s| that
-/// covers its error, so it gives no confident wrong answer. This test records that behavior; it does not meet the
-/// criteria, and the README, the note and the pull request report the cell as NOT MET.
+/// D6 in f64 (alpha = 1e-8, dressed, K = 30) is **NOT MET** with the windows at 0.7 K and 0.8 K either. On the grid of #191
+/// (0.2 ... 0.6 K) none starts where the dressing's coefficients have fallen below the singular ones and the locator said
+/// `Unresolved` with an error of s of 0.41 (criteria 1, 2 and 4 failed). With the late windows it chooses the ratio model
+/// at first order 24 (0.8 K), degree 1 and locates s to 2e-4 (tolerance 1e-2) and alpha to 1e-2 (0.1), the bars cover and
+/// are useful (criteria 2, 3 and 4 hold), but the bar of s is 5.3% of |s|, above the 5% of `max_rel_bar`: the kind is
+/// `Unresolved` and criterion 1 fails. `max_rel_bar` is not changed to make the cell pass. This test records what the
+/// locator does there; it does not meet the criteria, and the PR and the notes report the cell as NOT MET.
 #[test]
 fn d6_f64_is_not_met() {
     let case = cases().into_iter().find(|c| c.id == "D6").unwrap();
     let r = run(&case, Lane::F64);
     print_row(&r);
-    assert_eq!(
-        failed(&r),
-        vec!["1 kind", "2 tolerance", "4 bar useful"],
-        "D6 f64 changed"
-    );
+    assert_eq!(failed(&r), vec!["1 kind"], "D6 f64 changed");
     assert_eq!(r.kind, Kind::Unresolved);
     assert!(r.bar_s_rel > 0.05, "the bar is above the resolution limit");
+    assert!(
+        r.err_s < r.tol_s && r.err_a < r.tol_a,
+        "the location is within the tolerances"
+    );
 }
 
 /// the six controls of the README on one cell
@@ -598,9 +600,11 @@ const LANES: [Lane; 3] = [Lane::F64, Lane::Dd, Lane::Qd];
 ///
 /// * `wrong-sigma` and `wrong-alpha` fail check 2 in all 72 cells (24 cases x 3 lanes);
 /// * `pair-by-ratio` fails checks 1 and 2 in the 18 cells of the pair cases C1 to C5 and N2;
-/// * `bar-shrunk` (bars x 1e-3) fails check 3 in every cell except ten, where it is silent (the error is 0, or at least
-///   a thousand times below the bar): P1 f64 and double-double, D1, D2 and C4 in double-double and quad-double, T1 and T2
-///   in quad-double; those ten stay silent, and are reported as silent;
+/// * `bar-shrunk` (bars x 1e-3) fails check 3 in every cell except eight, where it is silent (the error is 0, or at least
+///   a thousand times below the bar): P1 f64 and double-double, D1 and D2 in double-double and quad-double, C4 and T1 in
+///   quad-double; those eight stay silent, and are reported as silent (on the grid of #191 there were ten: it was silent
+///   on C4 in double-double and T2 in quad-double too, whose chosen cells the windows of 0.7 K and 0.8 K changed; I206-mac
+///   README A1);
 /// * `window-early` (ratio model, first order 2, degree 2) fails check 2 on the cases with a farther singularity, T1,
 ///   T2 and T3, in all three lanes: a window that starts too early fails on a planted case;
 /// * `window-short` (ratio model, the last 8 orders, degree 2) fails check 2 on the noisy cases N1 and N2 and on the
@@ -636,14 +640,12 @@ fn controls_fire() {
         ("D1", Lane::Qd),
         ("D2", Lane::Dd),
         ("D2", Lane::Qd),
-        ("C4", Lane::Dd),
         ("C4", Lane::Qd),
         ("T1", Lane::Qd),
-        ("T2", Lane::Qd),
     ];
     assert_eq!(
         silent_found, silent,
-        "bar-shrunk fires on all cells but its ten silent ones"
+        "bar-shrunk fires on all cells but its eight silent ones"
     );
     for id in ["C1", "C2", "C3", "C4", "C5", "N2"] {
         for lane in LANES {
@@ -736,7 +738,7 @@ fn fingerprint(flip: bool) -> u64 {
 /// that remainder does not see.
 #[test]
 fn bitwise_across_backends() {
-    const EXPECTED: u64 = 0xf3a1_3cba_157d_2e3c;
+    const EXPECTED: u64 = 0xc534_cbdc_c583_95a4;
     let h = fingerprint(false);
     println!("fingerprint {h:#018x}");
     assert_eq!(h, EXPECTED, "the fingerprint of the table changed");
